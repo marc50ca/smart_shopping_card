@@ -7,7 +7,7 @@
  * from any open modal input field.
  */
 
-const CARD_VERSION = "1.2.0";
+const CARD_VERSION = "1.3.0";
 
 const DEFAULT_CATEGORIES = [
   { name: "Produce",       icon: "🥦", color: "#4CAF50" },
@@ -207,6 +207,98 @@ const CARD_STYLES = `
   .image-preview { width:60px; height:60px; border-radius:10px; object-fit:cover; border:1px solid var(--ss-border); }
   .image-preview-placeholder { width:60px; height:60px; border-radius:10px; border:1px dashed var(--ss-border); display:flex; align-items:center; justify-content:center; font-size:24px; color:var(--ss-text-secondary); }
 
+  /* ═══════════════ LAYOUT: COMPACT ═══════════════ */
+  .layout-compact .shopping-item { padding:6px 14px; gap:8px; }
+  .layout-compact .item-image,
+  .layout-compact .item-image-placeholder { display:none !important; }
+  .layout-compact .item-name { font-size:13px; }
+  .layout-compact .item-meta { display:none; }
+  .layout-compact .item-qty { font-size:11px; padding:1px 6px; }
+  .layout-compact .cat-header { padding:6px 14px 4px; font-size:10px; }
+  .layout-compact .check-btn { width:18px; height:18px; font-size:10px; }
+
+  /* ═══════════════ LAYOUT: GRID ═══════════════ */
+  .layout-grid .items-container { padding:10px; }
+  .layout-grid .cat-header { padding:8px 4px 4px; font-size:10px; }
+  .layout-grid .items-grid {
+    display:grid;
+    grid-template-columns:repeat(var(--ss-cols,3), 1fr);
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .layout-grid .grid-item {
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--ss-border);
+    border-radius:12px;
+    overflow:hidden;
+    cursor:pointer;
+    transition:all .2s;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+  }
+  .layout-grid .grid-item:hover { background:rgba(255,255,255,.07); transform:translateY(-1px); }
+  .layout-grid .grid-item.checked { opacity:.4; }
+  .layout-grid .grid-item-img {
+    width:100%; aspect-ratio:1; object-fit:cover;
+    background:rgba(255,255,255,.05);
+    display:flex; align-items:center; justify-content:center;
+    font-size:32px; flex-shrink:0;
+  }
+  .layout-grid .grid-item-img img { width:100%; height:100%; object-fit:cover; }
+  .layout-grid .grid-item-body { padding:8px; flex:1; }
+  .layout-grid .grid-item-name { font-size:12px; font-weight:600; line-height:1.3; color:var(--ss-text); }
+  .layout-grid .grid-item.checked .grid-item-name { text-decoration:line-through; color:var(--ss-text-secondary); }
+  .layout-grid .grid-item-qty { font-size:10px; color:var(--ss-primary); font-weight:700; margin-top:3px; }
+  .layout-grid .grid-check {
+    position:absolute; top:6px; left:6px;
+    width:22px; height:22px; border-radius:50%;
+    border:2px solid rgba(255,255,255,.3);
+    background:rgba(0,0,0,.4);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    font-size:11px; color:transparent; transition:all .2s; backdrop-filter:blur(4px);
+  }
+  .layout-grid .grid-check:hover { border-color:var(--ss-primary); color:var(--ss-primary); }
+  .layout-grid .grid-check.checked { background:var(--ss-primary); border-color:var(--ss-primary); color:#000; }
+  .layout-grid .grid-remove {
+    position:absolute; top:6px; right:6px; opacity:0;
+    width:22px; height:22px; border-radius:50%;
+    border:none; background:rgba(255,107,107,.8);
+    color:#fff; font-size:11px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:opacity .2s; backdrop-filter:blur(4px);
+  }
+  .layout-grid .grid-item:hover .grid-remove { opacity:1; }
+
+  /* ═══════════════ LAYOUT TOGGLE BTN ═══════════════ */
+  .layout-btn { position:relative; }
+  .layout-menu {
+    position:absolute; top:calc(100% + 6px); right:0;
+    background:#1a1a2e; border:1px solid rgba(255,255,255,.12);
+    border-radius:12px; padding:6px; z-index:200;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);
+    display:flex; flex-direction:column; gap:4px; min-width:130px;
+    animation:slideUp .15s ease;
+  }
+  .layout-option {
+    display:flex; align-items:center; gap:8px;
+    padding:8px 10px; border-radius:8px; cursor:pointer;
+    font-size:13px; font-weight:500; color:var(--ss-text);
+    border:none; background:transparent; width:100%; text-align:left;
+    transition:background .15s;
+  }
+  .layout-option:hover { background:rgba(255,255,255,.06); }
+  .layout-option.active { background:rgba(0,212,170,.15); color:var(--ss-primary); }
+
+  /* ═══════════════ SIZE CONTROL ═══════════════ */
+  .size-control {
+    display:flex; align-items:center; gap:10px; padding:8px 16px;
+    background:rgba(255,255,255,.02); border-bottom:1px solid var(--ss-border);
+    font-size:12px; color:var(--ss-text-secondary);
+  }
+  .size-slider { flex:1; accent-color:var(--ss-primary); cursor:pointer; }
+  .size-label { min-width:32px; text-align:right; font-weight:600; color:var(--ss-primary); font-size:11px; }
+
   /* STORE POPUP */
   .store-popup { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,#0f3460,#16213e); border:1px solid var(--ss-primary); border-radius:16px; padding:16px 20px; z-index:10000; box-shadow:0 8px 32px rgba(0,212,170,.25); display:flex; align-items:center; gap:14px; min-width:300px; animation:slideUp .3s ease; }
   .popup-icon { font-size:32px; display:flex; align-items:center; }
@@ -240,6 +332,7 @@ class SmartShoppingCard extends HTMLElement {
     this._activeCategory  = "all";
     this._searchQuery     = "";
     this._settingsTab     = "stores";
+    this._showLayoutMenu  = false;
 
     // Modal state — persisted separately so HA updates don't destroy them
     this._modalType       = null;   // "add_item" | "add_store" | "add_category" | "store_popup"
@@ -255,6 +348,10 @@ class SmartShoppingCard extends HTMLElement {
     // DOM refs
     this._cardDiv  = null;
     this._modalDiv = null;
+
+    // Layout & size — overridden by config YAML
+    this._layout    = "list";   // "list" | "grid" | "compact"
+    this._maxHeight = 420;
   }
 
   // ── Config / hass ──────────────────────────────────────────────────
@@ -262,6 +359,13 @@ class SmartShoppingCard extends HTMLElement {
   setConfig(config) {
     this._config   = config;
     this._entityId = config.entity_id || null;
+
+    // Layout from YAML (user can also toggle at runtime)
+    if (config.layout && ["list","grid","compact"].includes(config.layout))
+      this._layout = config.layout;
+    if (config.max_height && !isNaN(config.max_height))
+      this._maxHeight = parseInt(config.max_height);
+
     this._initDOM();
   }
 
@@ -384,20 +488,49 @@ class SmartShoppingCard extends HTMLElement {
     const pct    = this._calcProgress();
     const groups = this._getGroupedItems();
     const total  = Object.values(groups).flat().length;
+    const cfg    = this._config;
+
+    // Apply layout class and CSS vars to the card div itself
+    this._cardDiv.className = `layout-${this._layout}`;
+    const cols = parseInt(cfg.columns) || (this._layout === "grid" ? 3 : 1);
+    this._cardDiv.style.setProperty("--ss-cols", cols);
+
+    const showProgress  = cfg.show_progress  !== false;
+    const showSearch    = cfg.show_search    !== false;
+    const showStoreBar  = cfg.show_store_bar !== false;
+    const showCatBar    = cfg.show_categories !== false;
+
     return `
       ${this._buildHeader()}
-      ${this._buildStoreBar()}
-      ${this._buildCategoryBar()}
-      ${this._buildProgress(pct)}
-      ${this._buildSearchBar()}
+      ${showStoreBar  ? this._buildStoreBar()     : ""}
+      ${showCatBar    ? this._buildCategoryBar()  : ""}
+      ${showProgress  ? this._buildProgress(pct)  : ""}
+      ${this._buildSizeControl()}
+      ${showSearch    ? this._buildSearchBar()    : ""}
       ${this._view === "settings" ? this._buildSettings() : this._buildItemsList(groups, total)}
       ${this._view !== "settings" ? this._buildFooter() : ""}
     `;
   }
 
+  _buildLayoutMenu() {
+    if (!this._showLayoutMenu) return "";
+    const layoutIcons  = { list:"☰", grid:"⊞", compact:"≡" };
+    const layoutLabels = { list:"List", grid:"Grid", compact:"Dense" };
+    const opts = ["list","grid","compact"].map(l =>
+      '<button class="layout-option ' + (this._layout===l?"active":"") + '" data-layout="' + l + '">' +
+      '<span style="font-size:16px">' + layoutIcons[l] + '</span> ' + layoutLabels[l] +
+      '</button>'
+    ).join("");
+    return '<div class="layout-menu">' + opts + '</div>';
+  }
+
   _buildHeader() {
     const u = this._state.unchecked_count;
     const todoLabel = (this._state.todo_entity || "").replace("todo.","").replace(/_/g," ") || "No list";
+    const layoutIcons = { list:"☰", grid:"⊞", compact:"≡" };
+    const clearBtn = (u < this._state.total_count && this._state.total_count > 0)
+      ? '<button class="icon-btn" id="hdr-clear" style="color:#ff6b6b" title="Clear checked">🗑</button>'
+      : "";
     return `
       <div class="card-header">
         <div class="header-icon">🛒</div>
@@ -406,13 +539,33 @@ class SmartShoppingCard extends HTMLElement {
           <div class="header-subtitle">📋 ${todoLabel}</div>
         </div>
         <div class="header-actions">
-          ${u > 0 ? `<div class="badge">${u}</div>` : ""}
-          <button class="icon-btn" id="hdr-add"      title="Add Item">＋</button>
+          ${u > 0 ? '<div class="badge">' + u + '</div>' : ""}
+          <button class="icon-btn" id="hdr-add" title="Add Item">＋</button>
+          <div class="layout-btn">
+            <button class="icon-btn ${this._showLayoutMenu ? "active" : ""}" id="hdr-layout"
+              title="Change layout" style="font-size:18px">${layoutIcons[this._layout]}</button>
+            ${this._buildLayoutMenu()}
+          </div>
           <button class="icon-btn ${this._view === "settings" ? "active" : ""}" id="hdr-settings" title="Settings">⚙</button>
-          ${u < this._state.total_count && this._state.total_count > 0
-            ? `<button class="icon-btn" id="hdr-clear" style="color:#ff6b6b" title="Clear checked">🗑</button>`
-            : ""}
+          ${clearBtn}
         </div>
+      </div>`;
+  }
+
+  _buildSizeControl() {
+    if (this._config.show_size_control === false) return "";
+    const cols = parseInt(this._config.columns) || 3;
+    const colsHtml = this._layout === "grid"
+      ? '<span style="margin-left:8px">⊞ Cols</span>' +
+        '<input class="size-slider" id="cols-slider" type="range" min="2" max="5" step="1" value="' + cols + '" style="max-width:80px">' +
+        '<span class="size-label">' + cols + '</span>'
+      : "";
+    return `
+      <div class="size-control">
+        <span>↕ Height</span>
+        <input class="size-slider" id="size-slider" type="range" min="150" max="800" step="10" value="${this._maxHeight}">
+        <span class="size-label">${this._maxHeight}px</span>
+        ${colsHtml}
       </div>`;
   }
 
@@ -479,7 +632,7 @@ class SmartShoppingCard extends HTMLElement {
       </div></div>`;
 
     return `
-      <div class="items-container">
+      <div class="items-container" style="max-height:${this._maxHeight}px">
         ${Object.entries(groups).map(([cat, items]) => {
           const ci = this._getCategoryInfo(cat);
           return `
@@ -487,32 +640,64 @@ class SmartShoppingCard extends HTMLElement {
               <div class="cat-header" style="color:${ci.color||"var(--ss-text-secondary)"}">
                 ${renderIcon(ci.icon,"png-icon-sm",cat)} ${cat}
               </div>
-              ${items.map(item => {
-                const checked = item.checked;
-                const qty = item.quantity || 1;
-                const unit = item.unit || "";
-                const qtyLabel = unit ? `${qty}${unit}` : qty > 1 ? `×${qty}` : "";
-                const catI = this._getCategoryInfo(item.category);
-                return `
-                  <div class="shopping-item ${checked?"checked":""}" data-item="${item.name}">
-                    <button class="check-btn ${checked?"checked":""}" data-check="${item.name}">${checked?"✓":""}</button>
-                    ${item.image_url ? `<img class="item-image" src="${item.image_url}" alt="${item.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ""}
-                    <div class="item-image-placeholder" ${item.image_url?'style="display:none"':""}>${renderIcon(catI.icon,"png-icon-lg",item.category)}</div>
-                    <div class="item-info">
-                      <div class="item-name">${item.name}</div>
-                      <div class="item-meta">
-                        ${item.notes ? `<span>💬 ${item.notes}</span>` : ""}
-                        ${item.store ? `<span class="item-store-tag">📍 ${item.store}</span>` : ""}
-                      </div>
-                    </div>
-                    ${qtyLabel ? `<div class="item-qty">${qtyLabel}</div>` : ""}
-                    <div class="item-actions">
-                      <button class="item-action-btn" data-remove="${item.name}" title="Remove">✕</button>
-                    </div>
-                  </div>`;
-              }).join("")}
+              ${this._layout === "grid"
+                ? `<div class="items-grid">${items.map(item => this._buildGridItem(item)).join("")}</div>`
+                : items.map(item => this._buildListItem(item)).join("")
+              }
             </div>`;
         }).join("")}
+      </div>`;
+  }
+
+  _buildListItem(item) {
+    const checked  = item.checked;
+    const qty      = item.quantity || 1;
+    const unit     = item.unit || "";
+    const qtyLabel = unit ? (qty + unit) : qty > 1 ? ("×" + qty) : "";
+    const catI     = this._getCategoryInfo(item.category);
+    const showImg  = this._config.show_images !== false;
+    const imgHtml  = showImg
+      ? (item.image_url
+          ? '<img class="item-image" src="' + item.image_url + '" alt="' + item.name + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">' +
+            '<div class="item-image-placeholder" style="display:none">' + renderIcon(catI.icon,"png-icon-lg",item.category) + '</div>'
+          : '<div class="item-image-placeholder">' + renderIcon(catI.icon,"png-icon-lg",item.category) + '</div>'
+        )
+      : "";
+    const notesHtml = item.notes ? '<span>💬 ' + item.notes + '</span>' : "";
+    const storeHtml = item.store ? '<span class="item-store-tag">📍 ' + item.store + '</span>' : "";
+    return `
+      <div class="shopping-item ${checked?"checked":""}" data-item="${item.name}">
+        <button class="check-btn ${checked?"checked":""}" data-check="${item.name}">${checked?"✓":""}</button>
+        ${imgHtml}
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          <div class="item-meta">${notesHtml}${storeHtml}</div>
+        </div>
+        ${qtyLabel ? '<div class="item-qty">' + qtyLabel + '</div>' : ""}
+        <div class="item-actions">
+          <button class="item-action-btn" data-remove="${item.name}" title="Remove">✕</button>
+        </div>
+      </div>`;
+  }
+
+  _buildGridItem(item) {
+    const checked  = item.checked;
+    const qty      = item.quantity || 1;
+    const unit     = item.unit || "";
+    const qtyLabel = unit ? `${qty}${unit}` : qty > 1 ? `×${qty}` : "";
+    const catI     = this._getCategoryInfo(item.category);
+    const imgHtml  = item.image_url
+      ? `<img src="${item.image_url}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`
+      : renderIcon(catI.icon, "png-icon-lg", item.category);
+    return `
+      <div class="grid-item ${checked?"checked":""}">
+        <div class="grid-item-img">${imgHtml}</div>
+        <div class="grid-item-body">
+          <div class="grid-item-name">${item.name}</div>
+          ${qtyLabel ? `<div class="grid-item-qty">${qtyLabel}</div>` : ""}
+        </div>
+        <button class="grid-check ${checked?"checked":""}" data-check="${item.name}">${checked?"✓":""}</button>
+        <button class="grid-remove" data-remove="${item.name}" title="Remove">✕</button>
       </div>`;
   }
 
@@ -530,11 +715,13 @@ class SmartShoppingCard extends HTMLElement {
         <div class="tab-bar">
           <button class="tab-btn ${this._settingsTab==="stores"?"active":""}"     data-tab="stores">🏪 Stores</button>
           <button class="tab-btn ${this._settingsTab==="categories"?"active":""}" data-tab="categories">🏷 Categories</button>
+          <button class="tab-btn ${this._settingsTab==="layout"?"active":""}"     data-tab="layout">⊞ Layout</button>
           <button class="tab-btn ${this._settingsTab==="options"?"active":""}"    data-tab="options">⚙ Options</button>
         </div>
         <div style="padding:16px">
           ${this._settingsTab==="stores"     ? this._buildStoresTab()     : ""}
           ${this._settingsTab==="categories" ? this._buildCategoriesTab() : ""}
+          ${this._settingsTab==="layout"     ? this._buildLayoutTab()     : ""}
           ${this._settingsTab==="options"    ? this._buildOptionsTab()    : ""}
         </div>
       </div>`;
@@ -574,6 +761,107 @@ class SmartShoppingCard extends HTMLElement {
         </div>
         <button class="btn-primary" id="settings-add-cat" style="margin-top:12px">＋ Add Category</button>
       </div>`;
+  }
+
+  _buildColsSection(cols) {
+    const btns = [2,3,4,5].map(n => {
+      const active = cols === n;
+      return '<button data-set-cols="' + n + '" style="flex:1;padding:10px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;' +
+        'background:' + (active?"rgba(0,212,170,.15)":"rgba(255,255,255,.04)") + ';' +
+        'border:1.5px solid ' + (active?"var(--ss-primary)":"var(--ss-border)") + ';' +
+        'color:' + (active?"var(--ss-primary)":"var(--ss-text)") + ';transition:all .2s;">' + n + '</button>';
+    }).join("");
+    return '<div class="settings-section"><div class="settings-section-title">⊞ Grid Columns</div><div style="display:flex;gap:8px">' + btns + '</div></div>';
+  }
+
+  _buildLayoutTab() {
+    const cfg  = this._config;
+    const cols = parseInt(cfg.columns) || 3;
+    const layoutInfo = {
+      list:    { icon:"☰", label:"List",    desc:"Classic rows with images" },
+      grid:    { icon:"⊞", label:"Grid",    desc:"Image tiles in a grid" },
+      compact: { icon:"≡", label:"Dense",   desc:"Tight rows, no images" },
+    };
+    return `
+      <div class="settings-section">
+        <div class="settings-section-title">⊞ Layout Style</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+          ${["list","grid","compact"].map(l => `
+            <button data-set-layout="${l}" style="
+              background:${this._layout===l?"rgba(0,212,170,.15)":"rgba(255,255,255,.04)"};
+              border:1.5px solid ${this._layout===l?"var(--ss-primary)":"var(--ss-border)"};
+              border-radius:10px; padding:12px 8px; cursor:pointer;
+              color:${this._layout===l?"var(--ss-primary)":"var(--ss-text)"};
+              display:flex; flex-direction:column; align-items:center; gap:6px; transition:all .2s;">
+              <span style="font-size:22px">${layoutInfo[l].icon}</span>
+              <span style="font-size:12px;font-weight:700">${layoutInfo[l].label}</span>
+              <span style="font-size:10px;color:var(--ss-text-secondary);text-align:center">${layoutInfo[l].desc}</span>
+            </button>`).join("")}
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">↕ List Height</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input class="size-slider" id="st-height" type="range" min="150" max="900" step="10" value="${this._maxHeight}" style="flex:1;accent-color:var(--ss-primary)">
+          <span id="st-height-label" style="font-weight:700;color:var(--ss-primary);min-width:44px">${this._maxHeight}px</span>
+        </div>
+      </div>
+
+      ${this._layout === "grid" ? this._buildColsSection(cols) : ""}
+
+      <div class="settings-section">
+        <div class="settings-section-title">👁 Visible Sections</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${[
+            ["show_store_bar",    "🏪 Store bar"],
+            ["show_categories",  "🏷 Category bar"],
+            ["show_progress",    "📊 Progress bar"],
+            ["show_search",      "🔍 Search bar"],
+            ["show_images",      "🖼 Item images"],
+            ["show_size_control","↕ Size controls"],
+          ].map(([key, label]) => {
+            const on = cfg[key] !== false;
+            return `
+              <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.04);border:1px solid var(--ss-border);border-radius:8px;padding:10px 12px">
+                <span style="font-size:13px">${label}</span>
+                <button data-toggle="${key}" style="
+                  width:42px; height:24px; border-radius:12px; border:none; cursor:pointer;
+                  background:${on?"var(--ss-primary)":"rgba(255,255,255,.12)"};
+                  position:relative; transition:background .2s;">
+                  <span style="position:absolute;top:3px;${on?"right:3px":"left:3px"};width:18px;height:18px;border-radius:50%;background:#fff;transition:all .2s;display:block"></span>
+                </button>
+              </div>`;
+          }).join("")}
+        </div>
+        <div style="font-size:11px;color:var(--ss-text-secondary);margin-top:10px">
+          💡 Changes here update your card's <code>configuration.yaml</code> keys when you copy them out.
+        </div>
+      </div>
+
+      <div style="background:rgba(255,255,255,.04);border:1px solid var(--ss-border);border-radius:10px;padding:12px;font-size:11px;font-family:monospace;color:var(--ss-text-secondary);margin-top:4px">
+        <div style="font-size:12px;font-weight:700;color:var(--ss-text);margin-bottom:6px">📋 Current YAML config</div>
+        <pre id="yaml-preview" style="margin:0;white-space:pre-wrap;word-break:break-all">${this._buildYamlPreview()}</pre>
+      </div>`;
+  }
+
+  _buildYamlPreview() {
+    const cfg = this._config;
+    const cols = parseInt(cfg.columns) || 3;
+    const lines = [
+      `type: custom:smart-shopping-card`,
+      `entity_id: ${this._entityId || "sensor.smart_shopping_shopping_list"}`,
+      `layout: ${this._layout}`,
+      `max_height: ${this._maxHeight}`,
+      ...(this._layout==="grid" ? [`columns: ${cols}`] : []),
+      ...(cfg.show_store_bar    === false ? [`show_store_bar: false`]    : []),
+      ...(cfg.show_categories   === false ? [`show_categories: false`]   : []),
+      ...(cfg.show_progress     === false ? [`show_progress: false`]     : []),
+      ...(cfg.show_search       === false ? [`show_search: false`]       : []),
+      ...(cfg.show_images       === false ? [`show_images: false`]       : []),
+      ...(cfg.show_size_control === false ? [`show_size_control: false`] : []),
+    ];
+    return lines.join("\n");
   }
 
   _buildOptionsTab() {
@@ -788,8 +1076,44 @@ class SmartShoppingCard extends HTMLElement {
 
     // Header
     $("hdr-add")?.addEventListener("click",      () => this._openModal("add_item"));
-    $("hdr-settings")?.addEventListener("click", () => { this._view = this._view==="settings"?"list":"settings"; this._updateCard(); });
+    $("hdr-settings")?.addEventListener("click", () => { this._view = this._view==="settings"?"list":"settings"; this._showLayoutMenu=false; this._updateCard(); });
     $("hdr-clear")?.addEventListener("click",    () => this._callService("clear_checked"));
+
+    // Layout toggle button — open/close the dropdown menu
+    $("hdr-layout")?.addEventListener("click", e => {
+      e.stopPropagation();
+      this._showLayoutMenu = !this._showLayoutMenu;
+      this._updateCard();
+    });
+    // Close layout menu when clicking outside
+    if (this._showLayoutMenu) {
+      const closeMenu = () => { this._showLayoutMenu=false; this._updateCard(); sr.removeEventListener("click", closeMenu); };
+      setTimeout(() => sr.addEventListener("click", closeMenu), 0);
+    }
+    $$("[data-layout]").forEach(el => el.addEventListener("click", e => {
+      e.stopPropagation();
+      this._layout = el.dataset.layout;
+      this._showLayoutMenu = false;
+      this._updateCard();
+    }));
+
+    // Size slider (header bar)
+    $("size-slider")?.addEventListener("input", e => {
+      this._maxHeight = parseInt(e.target.value);
+      // Update label in-place without full re-render
+      const lbl = e.target.nextElementSibling;
+      if (lbl) lbl.textContent = this._maxHeight + "px";
+      // Update the items container height directly
+      const ic = sr.querySelector(".items-container");
+      if (ic) ic.style.maxHeight = this._maxHeight + "px";
+    });
+    $("cols-slider")?.addEventListener("input", e => {
+      const cols = parseInt(e.target.value);
+      this._config = { ...this._config, columns: cols };
+      this._cardDiv.style.setProperty("--ss-cols", cols);
+      const lbl = e.target.nextElementSibling;
+      if (lbl) lbl.textContent = cols;
+    });
 
     // Store bar
     $$("[data-store]").forEach(el =>
@@ -863,6 +1187,36 @@ class SmartShoppingCard extends HTMLElement {
     $("settings-add-store")?.addEventListener("click", () => this._openModal("add_store"));
     $("settings-add-cat")?.addEventListener("click",   () => this._openModal("add_category"));
     $("settings-clear-checked")?.addEventListener("click", () => this._callService("clear_checked"));
+
+    // Layout tab — layout selector buttons
+    $$("[data-set-layout]").forEach(el => el.addEventListener("click", () => {
+      this._layout = el.dataset.setLayout;
+      this._updateCard();
+    }));
+
+    // Layout tab — columns selector
+    $$("[data-set-cols]").forEach(el => el.addEventListener("click", () => {
+      this._config = { ...this._config, columns: parseInt(el.dataset.setCols) };
+      this._cardDiv.style.setProperty("--ss-cols", el.dataset.setCols);
+      this._updateCard();
+    }));
+
+    // Layout tab — height slider
+    $("st-height")?.addEventListener("input", e => {
+      this._maxHeight = parseInt(e.target.value);
+      const lbl = $("st-height-label");
+      if (lbl) lbl.textContent = this._maxHeight + "px";
+      const ic = sr.querySelector(".items-container");
+      if (ic) ic.style.maxHeight = this._maxHeight + "px";
+    });
+
+    // Layout tab — visibility toggles
+    $$("[data-toggle]").forEach(el => el.addEventListener("click", () => {
+      const key = el.dataset.toggle;
+      const cur = this._config[key] !== false;
+      this._config = { ...this._config, [key]: !cur };
+      this._updateCard();
+    }));
   }
 
   // ── Modal event binding ────────────────────────────────────────────
@@ -1097,7 +1451,13 @@ class SmartShoppingCard extends HTMLElement {
   connectedCallback()    { this._startGeofence(); }
   disconnectedCallback() { this._stopGeofence();  }
 
-  static getStubConfig() { return { entity_id: "sensor.smart_shopping_shopping_list" }; }
+  static getStubConfig() {
+    return {
+      entity_id: "sensor.smart_shopping_shopping_list",
+      layout: "list",
+      max_height: 420,
+    };
+  }
   getCardSize()           { return 6; }
 }
 
