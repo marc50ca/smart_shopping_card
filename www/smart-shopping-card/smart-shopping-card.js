@@ -7,7 +7,7 @@
  * from any open modal input field.
  */
 
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.4.0";
 
 const DEFAULT_CATEGORIES = [
   { name: "Produce",       icon: "🥦", color: "#4CAF50" },
@@ -35,10 +35,21 @@ function isImageUrl(v) {
     /\.(png|jpg|jpeg|gif|svg|webp)(\?|$)/i.test(v);
 }
 
+function isMdiIcon(v) {
+  return v && (v.startsWith("mdi:") || v.startsWith("hass:") || v.startsWith("mdi-"));
+}
+
+const MDI_SIZE = { "png-icon-sm": "18", "png-icon": "24", "png-icon-lg": "32" };
+
 function renderIcon(icon, cls = "png-icon", alt = "") {
   if (!icon) return "📦";
   if (isImageUrl(icon)) {
     return `<img class="${cls}" src="${icon}" alt="${alt}" onerror="this.style.display='none'">`;
+  }
+  if (isMdiIcon(icon)) {
+    const sz = MDI_SIZE[cls] || "24";
+    const normalised = icon.startsWith("mdi-") ? "mdi:" + icon.slice(4) : icon;
+    return `<ha-icon icon="${normalised}" style="--mdc-icon-size:${sz}px;display:inline-flex;align-items:center;color:currentColor;flex-shrink:0"></ha-icon>`;
   }
   return icon;
 }
@@ -59,10 +70,10 @@ const CARD_STYLES = `
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .card-wrap { background: var(--ss-bg); border-radius: var(--ss-radius); overflow: hidden; font-family: var(--ss-font); color: var(--ss-text); position: relative; }
+  .card-wrap { background: var(--ss-bg); border-radius: var(--ss-radius); overflow: visible; font-family: var(--ss-font); color: var(--ss-text); position: relative; }
 
   /* HEADER */
-  .card-header { background: linear-gradient(135deg,#0f3460,#16213e 50%,#0f3460); padding:20px; display:flex; align-items:center; gap:14px; border-bottom:1px solid var(--ss-border); position:relative; overflow:hidden; }
+  .card-header { background: linear-gradient(135deg,#0f3460,#16213e 50%,#0f3460); padding:20px; display:flex; align-items:center; gap:14px; border-bottom:1px solid var(--ss-border); position:relative; overflow: visible; border-radius: var(--ss-radius) var(--ss-radius) 0 0; }
   .card-header::before { content:''; position:absolute; top:-50%; right:-20%; width:200px; height:200px; background:radial-gradient(circle,rgba(0,212,170,.15),transparent 70%); border-radius:50%; pointer-events:none; }
   .header-icon { font-size:32px; width:52px; height:52px; background:linear-gradient(135deg,var(--ss-primary),#00a884); border-radius:14px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(0,212,170,.3); flex-shrink:0; }
   .header-text { flex:1; }
@@ -273,22 +284,24 @@ const CARD_STYLES = `
   /* ═══════════════ LAYOUT TOGGLE BTN ═══════════════ */
   .layout-btn { position:relative; }
   .layout-menu {
-    position:absolute; top:calc(100% + 6px); right:0;
-    background:#1a1a2e; border:1px solid rgba(255,255,255,.12);
-    border-radius:12px; padding:6px; z-index:200;
-    box-shadow:0 8px 24px rgba(0,0,0,.4);
-    display:flex; flex-direction:column; gap:4px; min-width:130px;
+    position:fixed;
+    background:#1a1a2e; border:1px solid rgba(255,255,255,.18);
+    border-radius:12px; padding:6px; z-index:99999;
+    box-shadow:0 12px 32px rgba(0,0,0,.6);
+    display:flex; flex-direction:column; gap:4px; min-width:140px;
     animation:slideUp .15s ease;
   }
   .layout-option {
     display:flex; align-items:center; gap:8px;
-    padding:8px 10px; border-radius:8px; cursor:pointer;
+    padding:9px 12px; border-radius:8px; cursor:pointer;
     font-size:13px; font-weight:500; color:var(--ss-text);
     border:none; background:transparent; width:100%; text-align:left;
     transition:background .15s;
   }
-  .layout-option:hover { background:rgba(255,255,255,.06); }
-  .layout-option.active { background:rgba(0,212,170,.15); color:var(--ss-primary); }
+  .layout-option:hover { background:rgba(255,255,255,.08); }
+  .layout-option.active { background:rgba(0,212,170,.15); color:var(--ss-primary); font-weight:700; }
+  /* backdrop for closing the menu */
+  .layout-backdrop { position:fixed; inset:0; z-index:99998; }
 
   /* ═══════════════ SIZE CONTROL ═══════════════ */
   .size-control {
@@ -352,6 +365,7 @@ class SmartShoppingCard extends HTMLElement {
     // Layout & size — overridden by config YAML
     this._layout    = "list";   // "list" | "grid" | "compact"
     this._maxHeight = 420;
+    this._cardWidth = 100;      // percent of column width, 30-100
   }
 
   // ── Config / hass ──────────────────────────────────────────────────
@@ -365,6 +379,8 @@ class SmartShoppingCard extends HTMLElement {
       this._layout = config.layout;
     if (config.max_height && !isNaN(config.max_height))
       this._maxHeight = parseInt(config.max_height);
+    if (config.card_width && !isNaN(config.card_width))
+      this._cardWidth = Math.min(100, Math.max(30, parseInt(config.card_width)));
 
     this._initDOM();
   }
@@ -435,8 +451,8 @@ class SmartShoppingCard extends HTMLElement {
 
   _closeModal() {
     this._modalType = null;
+    this._showLayoutMenu = false;
     this._modalDiv.innerHTML = "";
-    // Refresh card counts/state only
     this._updateCard();
   }
 
@@ -495,6 +511,13 @@ class SmartShoppingCard extends HTMLElement {
     const cols = parseInt(cfg.columns) || (this._layout === "grid" ? 3 : 1);
     this._cardDiv.style.setProperty("--ss-cols", cols);
 
+    // Apply card width — centres the card within its Lovelace column
+    const wrap = this._cardDiv.parentElement;
+    if (wrap) {
+      wrap.style.maxWidth = this._cardWidth < 100 ? this._cardWidth + "%" : "";
+      wrap.style.margin   = this._cardWidth < 100 ? "0 auto" : "";
+    }
+
     const showProgress  = cfg.show_progress  !== false;
     const showSearch    = cfg.show_search    !== false;
     const showStoreBar  = cfg.show_store_bar !== false;
@@ -510,18 +533,6 @@ class SmartShoppingCard extends HTMLElement {
       ${this._view === "settings" ? this._buildSettings() : this._buildItemsList(groups, total)}
       ${this._view !== "settings" ? this._buildFooter() : ""}
     `;
-  }
-
-  _buildLayoutMenu() {
-    if (!this._showLayoutMenu) return "";
-    const layoutIcons  = { list:"☰", grid:"⊞", compact:"≡" };
-    const layoutLabels = { list:"List", grid:"Grid", compact:"Dense" };
-    const opts = ["list","grid","compact"].map(l =>
-      '<button class="layout-option ' + (this._layout===l?"active":"") + '" data-layout="' + l + '">' +
-      '<span style="font-size:16px">' + layoutIcons[l] + '</span> ' + layoutLabels[l] +
-      '</button>'
-    ).join("");
-    return '<div class="layout-menu">' + opts + '</div>';
   }
 
   _buildHeader() {
@@ -541,11 +552,8 @@ class SmartShoppingCard extends HTMLElement {
         <div class="header-actions">
           ${u > 0 ? '<div class="badge">' + u + '</div>' : ""}
           <button class="icon-btn" id="hdr-add" title="Add Item">＋</button>
-          <div class="layout-btn">
-            <button class="icon-btn ${this._showLayoutMenu ? "active" : ""}" id="hdr-layout"
-              title="Change layout" style="font-size:18px">${layoutIcons[this._layout]}</button>
-            ${this._buildLayoutMenu()}
-          </div>
+          <button class="icon-btn ${this._showLayoutMenu ? "active" : ""}" id="hdr-layout"
+            title="Change layout" style="font-size:18px">${layoutIcons[this._layout]}</button>
           <button class="icon-btn ${this._view === "settings" ? "active" : ""}" id="hdr-settings" title="Settings">⚙</button>
           ${clearBtn}
         </div>
@@ -562,7 +570,10 @@ class SmartShoppingCard extends HTMLElement {
       : "";
     return `
       <div class="size-control">
-        <span>↕ Height</span>
+        <span>↔ Width</span>
+        <input class="size-slider" id="width-slider" type="range" min="30" max="100" step="5" value="${this._cardWidth}">
+        <span class="size-label" id="width-label">${this._cardWidth}%</span>
+        <span style="margin-left:8px">↕ Height</span>
         <input class="size-slider" id="size-slider" type="range" min="150" max="800" step="10" value="${this._maxHeight}">
         <span class="size-label">${this._maxHeight}px</span>
         ${colsHtml}
@@ -808,6 +819,15 @@ class SmartShoppingCard extends HTMLElement {
         </div>
       </div>
 
+      <div class="settings-section">
+        <div class="settings-section-title">↔ Card Width</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input class="size-slider" id="st-width" type="range" min="30" max="100" step="5" value="${this._cardWidth}" style="flex:1;accent-color:var(--ss-primary)">
+          <span id="st-width-label" style="font-weight:700;color:var(--ss-primary);min-width:44px">${this._cardWidth}%</span>
+        </div>
+        <div style="font-size:11px;color:var(--ss-text-secondary);margin-top:6px">Narrows the card within its Lovelace column and centres it.</div>
+      </div>
+
       ${this._layout === "grid" ? this._buildColsSection(cols) : ""}
 
       <div class="settings-section">
@@ -853,6 +873,7 @@ class SmartShoppingCard extends HTMLElement {
       `entity_id: ${this._entityId || "sensor.smart_shopping_shopping_list"}`,
       `layout: ${this._layout}`,
       `max_height: ${this._maxHeight}`,
+      `card_width: ${this._cardWidth}`,
       ...(this._layout==="grid" ? [`columns: ${cols}`] : []),
       ...(cfg.show_store_bar    === false ? [`show_store_bar: false`]    : []),
       ...(cfg.show_categories   === false ? [`show_categories: false`]   : []),
@@ -888,8 +909,28 @@ class SmartShoppingCard extends HTMLElement {
       case "add_store":    return this._buildAddStoreModal();
       case "add_category": return this._buildAddCategoryModal();
       case "store_popup":  return this._buildStorePopup();
+      case "layout_menu":  return this._buildLayoutMenuHTML();
       default: return "";
     }
+  }
+
+  _buildLayoutMenuHTML() {
+    const layoutIcons  = { list:"☰", grid:"⊞", compact:"≡" };
+    const layoutLabels = { list:"List", grid:"Grid", compact:"Dense" };
+    const layoutDescs  = { list:"Rows with images", grid:"Image tile grid", compact:"Dense, no images" };
+    const r = this._layoutBtnRect || { right: 100, bottom: 60 };
+    // Position below and right-aligned to the button
+    const top  = Math.round(r.bottom + 6);
+    const right = Math.round(window.innerWidth - r.right);
+    const opts = ["list","grid","compact"].map(l =>
+      '<button class="layout-option ' + (this._layout===l?"active":"") + '" data-layout="' + l + '">' +
+      '<span style="font-size:18px;width:24px;display:inline-block;text-align:center">' + layoutIcons[l] + '</span>' +
+      '<span><div style="font-weight:600">' + layoutLabels[l] + '</div>' +
+      '<div style="font-size:10px;opacity:.6;margin-top:1px">' + layoutDescs[l] + '</div></span>' +
+      '</button>'
+    ).join("");
+    return '<div class="layout-backdrop" id="layout-backdrop"></div>' +
+           '<div class="layout-menu" style="top:' + top + 'px;right:' + right + 'px">' + opts + '</div>';
   }
 
   _buildAddItemModal() {
@@ -967,7 +1008,8 @@ class SmartShoppingCard extends HTMLElement {
             <div class="form-group">
               <label class="form-label">Icon</label>
               <div class="icon-picker-tabs">
-                <button class="icon-picker-tab ${tab!=="url"?"active":""}" id="tab-emoji">Emoji</button>
+                <button class="icon-picker-tab ${tab==="emoji"||(!tab&&tab!=="url"&&tab!=="mdi")?"active":""}" id="tab-emoji">Emoji</button>
+                <button class="icon-picker-tab ${tab==="mdi"?"active":""}"  id="tab-mdi">MDI</button>
                 <button class="icon-picker-tab ${tab==="url"?"active":""}"  id="tab-url">PNG / URL</button>
               </div>
               ${tab === "url" ? `
@@ -978,6 +1020,14 @@ class SmartShoppingCard extends HTMLElement {
                   <input class="form-input" id="f-icon-url" type="text" placeholder="https://… or /local/icons/store.png" value="${isUrl?f.icon:""}">
                 </div>
                 <div style="font-size:11px;color:var(--ss-text-secondary);margin-top:6px">Place PNGs in <code>config/www/icons/</code> → use <code>/local/icons/name.png</code></div>
+              ` : tab === "mdi" ? `
+                <div class="icon-url-row">
+                  <div id="icon-preview" class="icon-url-placeholder" style="font-size:28px">${isMdiIcon(f.icon) ? renderIcon(f.icon,"png-icon-lg","icon") : "?"}</div>
+                  <div style="flex:1">
+                    <input class="form-input" id="f-icon-mdi" type="text" placeholder="mdi:cart  or  mdi:store" value="${isMdiIcon(f.icon)?f.icon:""}">
+                    <div style="font-size:11px;color:var(--ss-text-secondary);margin-top:5px">Browse icons at <a href="https://pictogrammers.com/library/mdi/" target="_blank" style="color:var(--ss-primary)">pictogrammers.com</a></div>
+                  </div>
+                </div>
               ` : `
                 <div class="category-icon-grid">
                   ${STORE_ICONS.map(ic => `<div class="category-icon-opt ${f.icon===ic?"selected":""}" data-icon="${ic}">${ic}</div>`).join("")}
@@ -1025,7 +1075,8 @@ class SmartShoppingCard extends HTMLElement {
             <div class="form-group">
               <label class="form-label">Icon</label>
               <div class="icon-picker-tabs">
-                <button class="icon-picker-tab ${tab!=="url"?"active":""}" id="tab-emoji">Emoji</button>
+                <button class="icon-picker-tab ${tab==="emoji"||(!tab&&tab!=="url"&&tab!=="mdi")?"active":""}" id="tab-emoji">Emoji</button>
+                <button class="icon-picker-tab ${tab==="mdi"?"active":""}"  id="tab-mdi">MDI</button>
                 <button class="icon-picker-tab ${tab==="url"?"active":""}"  id="tab-url">PNG / URL</button>
               </div>
               ${tab === "url" ? `
@@ -1036,6 +1087,14 @@ class SmartShoppingCard extends HTMLElement {
                   <input class="form-input" id="f-icon-url" type="text" placeholder="https://… or /local/icons/cat.png" value="${isUrl?f.icon:""}">
                 </div>
                 <div style="font-size:11px;color:var(--ss-text-secondary);margin-top:6px">Place PNGs in <code>config/www/icons/</code> → use <code>/local/icons/name.png</code></div>
+              ` : tab === "mdi" ? `
+                <div class="icon-url-row">
+                  <div id="icon-preview" class="icon-url-placeholder" style="font-size:28px">${isMdiIcon(f.icon) ? renderIcon(f.icon,"png-icon-lg","icon") : "?"}</div>
+                  <div style="flex:1">
+                    <input class="form-input" id="f-icon-mdi" type="text" placeholder="mdi:food-apple  or  mdi:snowflake" value="${isMdiIcon(f.icon)?f.icon:""}">
+                    <div style="font-size:11px;color:var(--ss-text-secondary);margin-top:5px">Browse icons at <a href="https://pictogrammers.com/library/mdi/" target="_blank" style="color:var(--ss-primary)">pictogrammers.com</a></div>
+                  </div>
+                </div>
               ` : `
                 <div class="category-icon-grid">
                   ${CAT_ICONS.map(ic => `<div class="category-icon-opt ${f.icon===ic?"selected":""}" data-icon="${ic}">${ic}</div>`).join("")}
@@ -1079,25 +1138,35 @@ class SmartShoppingCard extends HTMLElement {
     $("hdr-settings")?.addEventListener("click", () => { this._view = this._view==="settings"?"list":"settings"; this._showLayoutMenu=false; this._updateCard(); });
     $("hdr-clear")?.addEventListener("click",    () => this._callService("clear_checked"));
 
-    // Layout toggle button — open/close the dropdown menu
+    // Layout toggle — opens dropdown in _modalDiv (immune to overflow:hidden)
     $("hdr-layout")?.addEventListener("click", e => {
       e.stopPropagation();
-      this._showLayoutMenu = !this._showLayoutMenu;
-      this._updateCard();
+      if (this._modalType === "layout_menu") {
+        this._showLayoutMenu = false;
+        this._closeModal();
+      } else {
+        this._showLayoutMenu = true;
+        // Capture the button's screen position for fixed-positioning the menu
+        this._layoutBtnRect = e.currentTarget.getBoundingClientRect();
+        this._openModal("layout_menu");
+        // Mark button active
+        e.currentTarget.classList.add("active");
+      }
     });
-    // Close layout menu when clicking outside
-    if (this._showLayoutMenu) {
-      const closeMenu = () => { this._showLayoutMenu=false; this._updateCard(); sr.removeEventListener("click", closeMenu); };
-      setTimeout(() => sr.addEventListener("click", closeMenu), 0);
-    }
-    $$("[data-layout]").forEach(el => el.addEventListener("click", e => {
-      e.stopPropagation();
-      this._layout = el.dataset.layout;
-      this._showLayoutMenu = false;
-      this._updateCard();
-    }));
 
-    // Size slider (header bar)
+    // Size slider (header bar) — width
+    $("width-slider")?.addEventListener("input", e => {
+      this._cardWidth = parseInt(e.target.value);
+      const lbl = sr.getElementById("width-label");
+      if (lbl) lbl.textContent = this._cardWidth + "%";
+      const wrap = this._cardDiv?.parentElement;
+      if (wrap) {
+        wrap.style.maxWidth = this._cardWidth < 100 ? this._cardWidth + "%" : "";
+        wrap.style.margin   = this._cardWidth < 100 ? "0 auto" : "";
+      }
+    });
+
+    // Size slider (header bar) — height
     $("size-slider")?.addEventListener("input", e => {
       this._maxHeight = parseInt(e.target.value);
       // Update label in-place without full re-render
@@ -1210,6 +1279,18 @@ class SmartShoppingCard extends HTMLElement {
       if (ic) ic.style.maxHeight = this._maxHeight + "px";
     });
 
+    // Layout tab — width slider
+    $("st-width")?.addEventListener("input", e => {
+      this._cardWidth = parseInt(e.target.value);
+      const lbl = $("st-width-label");
+      if (lbl) lbl.textContent = this._cardWidth + "%";
+      const wrap = this._cardDiv?.parentElement;
+      if (wrap) {
+        wrap.style.maxWidth = this._cardWidth < 100 ? this._cardWidth + "%" : "";
+        wrap.style.margin   = this._cardWidth < 100 ? "0 auto" : "";
+      }
+    });
+
     // Layout tab — visibility toggles
     $$("[data-toggle]").forEach(el => el.addEventListener("click", () => {
       const key = el.dataset.toggle;
@@ -1235,7 +1316,20 @@ class SmartShoppingCard extends HTMLElement {
       case "add_store":    this._bindAddStoreEvents($, $$);    break;
       case "add_category": this._bindAddCategoryEvents($, $$); break;
       case "store_popup":  this._bindStorePopupEvents($);      break;
+      case "layout_menu":  this._bindLayoutMenuEvents($, $$);  break;
     }
+  }
+
+  _bindLayoutMenuEvents($, $$) {
+    $("layout-backdrop")?.addEventListener("click", () => {
+      this._showLayoutMenu = false;
+      this._closeModal();
+    });
+    $$("[data-layout]").forEach(el => el.addEventListener("click", () => {
+      this._layout = el.dataset.layout;
+      this._showLayoutMenu = false;
+      this._closeModal();   // closes menu and refreshes card
+    }));
   }
 
   _bindAddItemEvents($, $$) {
@@ -1290,7 +1384,18 @@ class SmartShoppingCard extends HTMLElement {
     const f = this._storeForm;
 
     $("tab-emoji")?.addEventListener("click", () => { this._storeIconTab="emoji"; f.icon="🛒"; this._openModal("add_store"); });
-    $("tab-url")?.addEventListener("click",   () => { this._storeIconTab="url";              this._openModal("add_store"); });
+    $("tab-mdi")?.addEventListener("click",   () => { this._storeIconTab="mdi";               this._openModal("add_store"); });
+    $("tab-url")?.addEventListener("click",   () => { this._storeIconTab="url";               this._openModal("add_store"); });
+
+    // MDI input — update preview in-place, store value
+    $("f-icon-mdi")?.addEventListener("input", e => {
+      const val = e.target.value.trim();
+      f.icon = val || "🛒";
+      const preview = this.shadowRoot.getElementById("icon-preview");
+      if (preview && isMdiIcon(val)) {
+        preview.innerHTML = renderIcon(val, "png-icon-lg", "icon");
+      }
+    });
 
     // Emoji grid — no re-render, just toggle class and store value
     $$("[data-icon]").forEach(el => el.addEventListener("click", () => {
@@ -1342,7 +1447,18 @@ class SmartShoppingCard extends HTMLElement {
     const f = this._catForm;
 
     $("tab-emoji")?.addEventListener("click", () => { this._catIconTab="emoji"; f.icon="📦"; this._openModal("add_category"); });
+    $("tab-mdi")?.addEventListener("click",   () => { this._catIconTab="mdi";               this._openModal("add_category"); });
     $("tab-url")?.addEventListener("click",   () => { this._catIconTab="url";               this._openModal("add_category"); });
+
+    // MDI input — update preview in-place
+    $("f-icon-mdi")?.addEventListener("input", e => {
+      const val = e.target.value.trim();
+      f.icon = val || "📦";
+      const preview = this.shadowRoot.getElementById("icon-preview");
+      if (preview && isMdiIcon(val)) {
+        preview.innerHTML = renderIcon(val, "png-icon-lg", "icon");
+      }
+    });
 
     $$("[data-icon]").forEach(el => el.addEventListener("click", () => {
       $$("[data-icon]").forEach(e => e.classList.remove("selected"));
