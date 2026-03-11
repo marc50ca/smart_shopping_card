@@ -49,13 +49,15 @@ STORAGE_KEY = f"{DOMAIN}.data"
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Register HTTP views and Lovelace resource on initial HA setup."""
-    from .http import SmartShoppingCardView
+    from .http import SmartShoppingCardView, SmartShoppingSummaryCardView
     hass.http.register_view(SmartShoppingCardView())
+    hass.http.register_view(SmartShoppingSummaryCardView())
 
-    # Auto-register the card as a Lovelace resource
+    # Auto-register both cards as Lovelace resources
     try:
         from homeassistant.components.frontend import add_extra_js_url
         add_extra_js_url(hass, "/smart_shopping/smart-shopping-card.js")
+        add_extra_js_url(hass, "/smart_shopping/smart-shopping-summary-card.js")
         _LOGGER.debug("Smart Shopping card JS auto-registered with Lovelace")
     except Exception as err:
         _LOGGER.warning("Could not auto-register Lovelace resource: %s", err)
