@@ -135,7 +135,7 @@ const SUMMARY_STYLES = `
   .store-chip .chip-count.done { background:rgba(0,212,170,.3); color:var(--ss-primary); }
 
   /* ── NEXT ITEMS ── */
-  .next-items { display:flex; flex-direction:column; gap:6px; }
+  .next-items { display:flex; flex-direction:column; gap:6px; overflow-y:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
   .next-item  {
     display:flex; align-items:center; gap:10px;
     background:rgba(255,255,255,.03); border:1px solid var(--ss-border);
@@ -242,6 +242,12 @@ class SmartShoppingSummaryCard extends HTMLElement {
 
   // ── render ────────────────────────────────────────────────────────────────
 
+  _applyWidth() {
+    this.style.display  = "block";
+    this.style.maxWidth = this._cardWidth < 100 ? this._cardWidth + "%" : "";
+    this.style.margin   = this._cardWidth < 100 ? "0 auto" : "";
+  }
+
   _render() {
     if (!this._hass || !this._entityId) return;
 
@@ -251,21 +257,45 @@ class SmartShoppingSummaryCard extends HTMLElement {
       const style = document.createElement("style");
       style.textContent = SUMMARY_STYLES;
       root.appendChild(style);
-      this._wrap = document.createElement("div");
-      this._wrap.style.cssText = "width:100%;";
       this._card = document.createElement("div");
       this._card.className = "card";
-      this._wrap.appendChild(this._card);
-      root.appendChild(this._wrap);
+      // Persistent footer div — never wiped by _render
+      this._footerDiv = document.createElement("div");
+      root.appendChild(this._card);
+      root.appendChild(this._footerDiv);
       this._rendered = true;
+      this._initFooter();
     }
 
-    // Apply card width
-    this._wrap.style.maxWidth = this._cardWidth < 100 ? this._cardWidth + "%" : "";
-    this._wrap.style.margin   = this._cardWidth < 100 ? "0 auto" : "";
-
+    this._applyWidth();
     this._card.innerHTML = this._buildHTML();
     this._bindEvents();
+  }
+
+  _initFooter() {
+    if (!this._footerDiv) return;
+    const showAdd = this._config.show_quick_add !== false;
+    if (!showAdd) return;
+    this._footerDiv.innerHTML = `
+      <div class="quick-add-row">
+        <input class="qa-input" id="ss-qa" type="text" placeholder="Quick add item…" autocomplete="off">
+        <button class="qa-btn" id="ss-qa-btn">＋</button>
+      </div>`;
+    const input = this._footerDiv.querySelector('#ss-qa');
+    const btn   = this._footerDiv.querySelector('#ss-qa-btn');
+    const doAdd = () => {
+      const name = (input?.value || "").trim();
+      if (!name || !this._hass) return;
+      const item = { name, category:"Other", quantity:1, unit:"", image_url:"", store:"", notes:"" };
+      this._state.items.unshift({ ...item, checked:false });
+      this._state.total_count++;
+      this._state.unchecked_count++;
+      if (input) input.value = "";
+      this._render();
+      this._hass.callService("smart_shopping", "add_item", item);
+    };
+    btn?.addEventListener("click", doAdd);
+    input?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); doAdd(); } });
   }
 
   // ── HTML builders ─────────────────────────────────────────────────────────
@@ -278,9 +308,8 @@ class SmartShoppingSummaryCard extends HTMLElement {
     const showStores = cfg.show_stores     !== false;
     const showItems  = cfg.show_next       !== false;
     const showCats   = cfg.show_categories !== false;
-    const showAdd    = cfg.show_quick_add  !== false;
-    const showWidth  = cfg.show_width_control !== false;
-    const pct        = total ? Math.round(((total - rem) / total) * 100) : 0;
+    const showWidth = cfg.show_width_control !== false;
+    const pct       = total ? Math.round(((total - rem) / total) * 100) : 0;
     const allDone    = total > 0 && rem === 0;
 
     return `
@@ -290,7 +319,6 @@ class SmartShoppingSummaryCard extends HTMLElement {
       ${showItems  ? this._buildNextItemsSection(maxItems)  : ""}
       ${allDone    ? this._buildAllDone()                   : ""}
       ${showWidth  ? this._buildWidthControl()              : ""}
-      ${showAdd    ? this._buildQuickAdd()                  : ""}
     `;
   }
 
@@ -440,13 +468,7 @@ class SmartShoppingSummaryCard extends HTMLElement {
       </div>`;
   }
 
-  _buildQuickAdd() {
-    return `
-      <div class="quick-add-row">
-        <input class="qa-input" id="qa" type="text" placeholder="Quick add item…">
-        <button class="qa-btn" id="qa-btn">＋</button>
-      </div>`;
-  }
+
 
   // ── Events ────────────────────────────────────────────────────────────────
 
@@ -459,8 +481,7 @@ class SmartShoppingSummaryCard extends HTMLElement {
     wcSlider?.addEventListener("input", e => {
       this._cardWidth = parseInt(e.target.value);
       if (wcValue) wcValue.textContent = this._cardWidth + "%";
-      this._wrap.style.maxWidth = this._cardWidth < 100 ? this._cardWidth + "%" : "";
-      this._wrap.style.margin   = this._cardWidth < 100 ? "0 auto" : "";
+      this._applyWidth();
     });
 
     // Check mini buttons
@@ -486,22 +507,7 @@ class SmartShoppingSummaryCard extends HTMLElement {
       });
     });
 
-    // Quick add
-    const qa    = sr.getElementById("qa");
-    const qaBtn = sr.getElementById("qa-btn");
-    const doAdd = () => {
-      const name = (qa?.value || "").trim();
-      if (!name || !this._hass) return;
-      const item = { name, category:"Other", quantity:1, unit:"", image_url:"", store:"", notes:"" };
-      this._state.items.unshift({ ...item, checked:false });
-      this._state.total_count++;
-      this._state.unchecked_count++;
-      if (qa) qa.value = "";
-      this._render();
-      this._hass.callService("smart_shopping", "add_item", item);
-    };
-    qaBtn?.addEventListener("click", doAdd);
-    qa?.addEventListener("keydown", e => { if (e.key === "Enter") doAdd(); });
+    // Quick add lives in persistent _footerDiv — bound in _initFooter()
   }
 
   // ── HA card API ───────────────────────────────────────────────────────────
