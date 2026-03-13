@@ -439,10 +439,11 @@ class SmartShoppingCard extends HTMLElement {
 
   // ── Width — applied directly to the host element ───────────────────
   _applyWidth() {
-    // Apply to the host element so Lovelace grid layout respects it
-    this.style.display  = "block";
-    this.style.maxWidth = this._cardWidth < 100 ? this._cardWidth + "%" : "";
-    this.style.margin   = this._cardWidth < 100 ? "0 auto" : "";
+    // Always fill the Lovelace column
+    this.style.display = "block";
+    this.style.width   = "100%";
+    this.style.maxWidth = "";
+    this.style.margin   = "";
   }
 
   // ── Footer — persistent layer, never wiped by HA state updates ──────
@@ -594,10 +595,7 @@ class SmartShoppingCard extends HTMLElement {
       : "";
     return `
       <div class="size-control">
-        <span>↔ Width</span>
-        <input class="size-slider" id="width-slider" type="range" min="30" max="100" step="5" value="${this._cardWidth}">
-        <span class="size-label" id="width-label">${this._cardWidth}%</span>
-        <span style="margin-left:8px">↕ Height</span>
+        <span>↕ Height</span>
         <input class="size-slider" id="size-slider" type="range" min="150" max="800" step="10" value="${this._maxHeight}">
         <span class="size-label">${this._maxHeight}px</span>
         ${colsHtml}
@@ -843,14 +841,7 @@ class SmartShoppingCard extends HTMLElement {
         </div>
       </div>
 
-      <div class="settings-section">
-        <div class="settings-section-title">↔ Card Width</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <input class="size-slider" id="st-width" type="range" min="30" max="100" step="5" value="${this._cardWidth}" style="flex:1;accent-color:var(--ss-primary)">
-          <span id="st-width-label" style="font-weight:700;color:var(--ss-primary);min-width:44px">${this._cardWidth}%</span>
-        </div>
-        <div style="font-size:11px;color:var(--ss-text-secondary);margin-top:6px">Narrows the card within its Lovelace column and centres it.</div>
-      </div>
+
 
       ${this._layout === "grid" ? this._buildColsSection(cols) : ""}
 
@@ -897,7 +888,7 @@ class SmartShoppingCard extends HTMLElement {
       `entity_id: ${this._entityId || "sensor.smart_shopping_shopping_list"}`,
       `layout: ${this._layout}`,
       `max_height: ${this._maxHeight}`,
-      `card_width: ${this._cardWidth}`,
+
       ...(this._layout==="grid" ? [`columns: ${cols}`] : []),
       ...(cfg.show_store_bar    === false ? [`show_store_bar: false`]    : []),
       ...(cfg.show_categories   === false ? [`show_categories: false`]   : []),
@@ -1178,14 +1169,6 @@ class SmartShoppingCard extends HTMLElement {
       }
     });
 
-    // Size slider (header bar) — width
-    $("width-slider")?.addEventListener("input", e => {
-      this._cardWidth = parseInt(e.target.value);
-      const lbl = sr.getElementById("width-label");
-      if (lbl) lbl.textContent = this._cardWidth + "%";
-      this._applyWidth();
-    });
-
     // Size slider (header bar) — height
     $("size-slider")?.addEventListener("input", e => {
       this._maxHeight = parseInt(e.target.value);
@@ -1294,14 +1277,6 @@ class SmartShoppingCard extends HTMLElement {
       if (lbl) lbl.textContent = this._maxHeight + "px";
       const ic = sr.querySelector(".items-container");
       if (ic) ic.style.maxHeight = this._maxHeight + "px";
-    });
-
-    // Layout tab — width slider
-    $("st-width")?.addEventListener("input", e => {
-      this._cardWidth = parseInt(e.target.value);
-      const lbl = $("st-width-label");
-      if (lbl) lbl.textContent = this._cardWidth + "%";
-      this._applyWidth();
     });
 
     // Layout tab — visibility toggles

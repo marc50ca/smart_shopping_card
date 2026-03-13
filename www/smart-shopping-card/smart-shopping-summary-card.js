@@ -188,15 +188,7 @@ const SUMMARY_STYLES = `
   .all-done-text { font-size:14px; font-weight:700; color:var(--ss-primary); }
   .all-done-sub  { font-size:12px; color:var(--ss-muted); margin-top:3px; }
 
-  /* ── WIDTH CONTROL ── */
-  .width-control {
-    display:flex; align-items:center; gap:10px;
-    padding:8px 18px; border-top:1px solid var(--ss-border);
-    background:rgba(255,255,255,.02);
-  }
-  .wc-label  { font-size:11px; color:var(--ss-muted); white-space:nowrap; }
-  .wc-slider { flex:1; accent-color:var(--ss-primary); cursor:pointer; height:4px; }
-  .wc-value  { font-size:11px; font-weight:700; color:var(--ss-primary); min-width:36px; text-align:right; }
+
 `;
 
 // ─── Card element ──────────────────────────────────────────────────────────
@@ -244,8 +236,9 @@ class SmartShoppingSummaryCard extends HTMLElement {
 
   _applyWidth() {
     this.style.display  = "block";
-    this.style.maxWidth = this._cardWidth < 100 ? this._cardWidth + "%" : "";
-    this.style.margin   = this._cardWidth < 100 ? "0 auto" : "";
+    this.style.width    = "100%";
+    this.style.maxWidth = "";
+    this.style.margin   = "";
   }
 
   _render() {
@@ -308,8 +301,7 @@ class SmartShoppingSummaryCard extends HTMLElement {
     const showStores = cfg.show_stores     !== false;
     const showItems  = cfg.show_next       !== false;
     const showCats   = cfg.show_categories !== false;
-    const showWidth = cfg.show_width_control !== false;
-    const pct       = total ? Math.round(((total - rem) / total) * 100) : 0;
+    const pct = total ? Math.round(((total - rem) / total) * 100) : 0;
     const allDone    = total > 0 && rem === 0;
 
     return `
@@ -318,7 +310,6 @@ class SmartShoppingSummaryCard extends HTMLElement {
       ${showStores ? this._buildStoreSection()              : ""}
       ${showItems  ? this._buildNextItemsSection(maxItems)  : ""}
       ${allDone    ? this._buildAllDone()                   : ""}
-      ${showWidth  ? this._buildWidthControl()              : ""}
     `;
   }
 
@@ -475,15 +466,6 @@ class SmartShoppingSummaryCard extends HTMLElement {
   _bindEvents() {
     const sr = this.shadowRoot;
 
-    // Width slider — live update, no full re-render
-    const wcSlider = sr.getElementById("wc-slider");
-    const wcValue  = sr.getElementById("wc-value");
-    wcSlider?.addEventListener("input", e => {
-      this._cardWidth = parseInt(e.target.value);
-      if (wcValue) wcValue.textContent = this._cardWidth + "%";
-      this._applyWidth();
-    });
-
     // Check mini buttons
     sr.querySelectorAll("[data-check]").forEach(el => {
       el.addEventListener("click", e => {
@@ -514,14 +496,12 @@ class SmartShoppingSummaryCard extends HTMLElement {
 
   static getStubConfig() {
     return {
-      entity_id:          "sensor.smart_shopping_shopping_list",
-      max_items:          5,
-      show_categories:    true,
-      show_stores:        true,
-      show_next:          true,
-      show_quick_add:     true,
-      card_width:         100,
-      show_width_control: true,
+      entity_id:       "sensor.smart_shopping_shopping_list",
+      max_items:       5,
+      show_categories: true,
+      show_stores:     true,
+      show_next:       true,
+      show_quick_add:  true,
     };
   }
 
