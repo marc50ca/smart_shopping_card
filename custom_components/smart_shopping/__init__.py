@@ -48,26 +48,49 @@ STORAGE_KEY = f"{DOMAIN}.data"
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Register HTTP views and Lovelace resource on initial HA setup."""
-    from .http import SmartShoppingCardView, SmartShoppingSummaryCardView
-    hass.http.register_view(SmartShoppingCardView())
-    hass.http.register_view(SmartShoppingSummaryCardView())
+    """Called when domain appears in configuration.yaml (rarely used)."""
+    # Registration is handled in async_setup_entry for config-flow integrations.
+    return True
 
-    # Auto-register both cards as Lovelace resources
+
+def _register_frontend(hass: HomeAssistant) -> None:
+    """Register JS HTTP views and Lovelace resources (idempotent)."""
+    from pathlib import Path
+    from .http import SmartShoppingCardView, SmartShoppingSummaryCardView, CARD_URL, SUMMARY_URL
+
+    # Only register HTTP views once per HA session
+    if not hass.data.get(f"{DOMAIN}_frontend_registered"):
+        hass.http.register_view(SmartShoppingCardView())
+        hass.http.register_view(SmartShoppingSummaryCardView())
+        hass.data[f"{DOMAIN}_frontend_registered"] = True
+        _LOGGER.info("Smart Shopping: JS views registered at %s and %s", CARD_URL, SUMMARY_URL)
+
+    # Verify JS files exist
+    here = Path(__file__).parent
+    for fname in ("smart-shopping-card.js", "smart-shopping-summary-card.js"):
+        if not (here / fname).exists():
+            _LOGGER.error("Smart Shopping: %s not found in %s — card will not load!", fname, here)
+
+    # Register with Lovelace (idempotent — HA deduplicates these internally)
     try:
         from homeassistant.components.frontend import add_extra_js_url
-        add_extra_js_url(hass, "/smart_shopping/smart-shopping-card.js")
-        add_extra_js_url(hass, "/smart_shopping/smart-shopping-summary-card.js")
-        _LOGGER.debug("Smart Shopping card JS auto-registered with Lovelace")
+        add_extra_js_url(hass, CARD_URL)
+        add_extra_js_url(hass, SUMMARY_URL)
+        _LOGGER.info("Smart Shopping: Lovelace resources registered")
     except Exception as err:
-        _LOGGER.warning("Could not auto-register Lovelace resource: %s", err)
-
-    return True
+        _LOGGER.warning(
+            "Smart Shopping: Could not auto-register Lovelace resources (%s). "
+            "Add manually in Settings → Dashboards → ⋮ → Resources: %s  and  %s",
+            err, CARD_URL, SUMMARY_URL,
+        )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Smart Shopping from a config entry."""
     hass.data.setdefault(DOMAIN, {})
+
+    # Register JS frontend — must happen during entry setup for config-flow integrations
+    _register_frontend(hass)
 
     store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
     try:
