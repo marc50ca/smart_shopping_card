@@ -33,6 +33,8 @@ function _icon(icon, size = 20, color = "currentColor") {
 
 const SUMMARY_STYLES = `
   :host {
+    display: block;
+    width: 100%;
     --ss-bg:      var(--card-background-color, #1a1a2e);
     --ss-surface: var(--secondary-background-color, #16213e);
     --ss-primary: #00d4aa;
@@ -46,6 +48,8 @@ const SUMMARY_STYLES = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   .card {
+    display: block;
+    width: 100%;
     background: var(--ss-bg);
     border-radius: var(--ss-r);
     color: var(--ss-text);
