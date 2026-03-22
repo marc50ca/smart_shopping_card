@@ -697,15 +697,15 @@ class SmartShoppingCard extends HTMLElement {
       ? `<img src="${item.image_url}" alt="${item.name}" onerror="this.style.display='none'">`
       : renderIcon(catI.icon, "png-icon-lg", item.category);
     const meta = [
-      item.store ? "\u{1F4CD} " + item.store : "",
-      item.notes ? "\u{1F4AC} " + item.notes : "",
+      item.store ? "📍 " + item.store : "",
+      item.notes ? "💬 " + item.notes : "",
     ].filter(Boolean).join(" · ");
     return `
       <div class="item-tile ${checked ? "checked" : ""}" data-item="${item.name}">
         <div class="item-tile-img">
           ${imgInner}
           ${qtyLabel ? `<span class="item-tile-qty">${qtyLabel}</span>` : ""}
-          <button class="item-tile-remove" data-remove="${item.name}" title="Remove">\u2715</button>
+          <button class="item-tile-remove" data-remove="${item.name}" title="Remove">✕</button>
         </div>
         <div class="item-tile-body">
           <div class="item-tile-name">${item.name}</div>
@@ -1551,7 +1551,13 @@ class SmartShoppingCard extends HTMLElement {
   getCardSize()           { return 6; }
 }
 
-customElements.define("smart-shopping-card", SmartShoppingCard);
+try {
+  if (!customElements.get("smart-shopping-card")) {
+    customElements.define("smart-shopping-card", SmartShoppingCard);
+  }
+} catch(e) {
+  console.error("Smart Shopping card failed to register:", e);
+}
 
 window.customCards = window.customCards || [];
 window.customCards.push({

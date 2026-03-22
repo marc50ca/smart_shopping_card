@@ -526,7 +526,13 @@ class SmartShoppingSummaryCard extends HTMLElement {
   getCardSize() { return 4; }
 }
 
-customElements.define("smart-shopping-summary-card", SmartShoppingSummaryCard);
+try {
+  if (!customElements.get("smart-shopping-summary-card")) {
+    customElements.define("smart-shopping-summary-card", SmartShoppingSummaryCard);
+  }
+} catch(e) {
+  console.error("Smart Shopping Summary card failed to register:", e);
+}
 
 window.customCards = window.customCards || [];
 window.customCards.push({
