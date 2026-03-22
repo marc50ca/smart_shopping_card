@@ -192,11 +192,32 @@ Any `icon` field accepts:
 
 | Symptom | Fix |
 |---------|-----|
-| "Custom element doesn't exist" | Add the two JS resources manually (see Step 4), then hard-refresh |
+| "Custom element doesn't exist" | See the detailed steps below |
 | Cards show but no items appear | Check `entity_id` — it must be `sensor.smart_shopping_shopping_list`, not the count sensor |
 | Integration not found in search | Confirm the full `custom_components/smart_shopping/` folder was copied, then do a full restart |
 | "Got it" taps do nothing | The integration must be configured (Step 3) for the `smart_shopping` services to exist |
 | Quick add input loses focus | Ensure you are on v16+ — earlier builds had a bug where HA state updates wiped the footer |
+
+### "Custom element doesn't exist" — detailed steps
+
+**1. Check the resource type is "JavaScript Module"**  
+In Settings → Dashboards → ⋮ → Resources, the type for both URLs must be **JavaScript Module**, not "JavaScript".
+
+**2. Check the URL is reachable**  
+Open your browser and navigate directly to:
+```
+http://homeassistant.local:8123/smart_shopping/smart-shopping-card.js
+```
+You should see raw JavaScript. If you get a 404 or an error page, the integration isn't serving the file — check HA logs for `Smart Shopping:` lines and confirm the full `custom_components/smart_shopping/` folder was copied correctly, then do a full restart.
+
+**3. Check the browser console for JS errors**  
+Open browser DevTools (`F12`) → **Console** tab → reload the page. Any error in the JS file will appear here and prevent the card from registering.
+
+**4. Hard-refresh after any change**  
+`Ctrl+Shift+R` (Windows/Linux) or `Cmd+Shift+R` (Mac). A normal refresh caches the old file.
+
+**5. Remove duplicate resource entries**  
+If `/smart_shopping/smart-shopping-card.js` appears more than once in Resources, remove duplicates — loading a script twice causes the second `customElements.define()` call to throw silently.
 
 ---
 
