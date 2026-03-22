@@ -136,10 +136,9 @@ const CARD_STYLES = `
   /* Tile image — square, always fills tile width */
   .item-tile-img { width:100%; aspect-ratio:1/1; background:rgba(255,255,255,.07); display:flex; align-items:center; justify-content:center; font-size:32px; overflow:hidden; position:relative; flex-shrink:0; }
   .item-tile-img img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-  .item-tile-qty { position:absolute; top:5px; right:5px; background:rgba(0,0,0,.7); color:var(--ss-primary); border-radius:6px; padding:2px 5px; font-size:9px; font-weight:800; z-index:1; }
-  .item-tile-remove { position:absolute; top:4px; left:4px; background:rgba(0,0,0,.55); border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:9px; color:rgba(255,255,255,.5); opacity:0; transition:opacity .2s; z-index:1; }
-  .item-tile:hover .item-tile-remove { opacity:1; }
-  .item-tile-remove:hover { background:rgba(255,107,107,.8); color:#fff; }
+  .item-tile-qty { position:absolute; top:5px; right:5px; background:rgba(0,0,0,.7); color:var(--ss-primary); border-radius:6px; padding:2px 5px; font-size:9px; font-weight:800; z-index:2; pointer-events:none; }
+  .item-tile-remove { position:absolute; top:4px; left:4px; background:rgba(180,30,30,.75); border:none; border-radius:50%; width:22px; height:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; z-index:3; line-height:1; padding:0; }
+  .item-tile-remove:hover, .item-tile-remove:active { background:rgba(220,30,30,.95); }
 
   /* Tile text body */
   .item-tile-body { padding:7px 8px 4px; flex:1; min-width:0; }
@@ -1191,33 +1190,43 @@ class SmartShoppingCard extends HTMLElement {
       }, 150);
     });
 
-    // Check/uncheck
-    // "Got it" — marks purchased AND removes in one tap
-    $$("[data-buy]").forEach(el => el.addEventListener("click", e => {
-      e.stopPropagation();
-      const name = el.dataset.buy;
-      const tile = el.closest(".item-tile");
-      if (tile) { tile.style.transition="transform .18s ease,opacity .18s ease"; tile.style.transform="scale(.85)"; tile.style.opacity="0"; }
-      setTimeout(() => {
-        this._callService("check_item",  { name });
-        this._callService("remove_item", { name });
+    // Use event delegation on the card div — more reliable than per-element listeners
+    // because it survives re-renders and works on touch devices
+    this._cardDiv.addEventListener("click", e => {
+      // "Got it" — mark purchased AND remove
+      const buyBtn = e.target.closest("[data-buy]");
+      if (buyBtn) {
+        e.stopPropagation();
+        const name = buyBtn.dataset.buy;
+        const tile = buyBtn.closest(".item-tile");
+        if (tile) {
+          tile.style.transition = "transform .18s ease, opacity .18s ease";
+          tile.style.transform  = "scale(.85)";
+          tile.style.opacity    = "0";
+        }
+        setTimeout(() => {
+          this._callService("check_item",  { name });
+          this._callService("remove_item", { name });
+          this._state.items           = this._state.items.filter(i => i.name !== name);
+          this._state.total_count     = this._state.items.length;
+          this._state.unchecked_count = this._state.items.filter(i => !i.checked).length;
+          this._updateCard();
+        }, 180);
+        return;
+      }
+
+      // ✕ corner — silent delete without marking purchased
+      const removeBtn = e.target.closest("[data-remove]");
+      if (removeBtn) {
+        e.stopPropagation();
+        const name = removeBtn.dataset.remove;
         this._state.items           = this._state.items.filter(i => i.name !== name);
         this._state.total_count     = this._state.items.length;
         this._state.unchecked_count = this._state.items.filter(i => !i.checked).length;
         this._updateCard();
-      }, 180);
-    }));
-
-    // Remove (✕ corner) — silently delete without marking purchased
-    $$("[data-remove]").forEach(el => el.addEventListener("click", e => {
-      e.stopPropagation();
-      const name = el.dataset.remove;
-      this._state.items           = this._state.items.filter(i => i.name !== name);
-      this._state.total_count     = this._state.items.length;
-      this._state.unchecked_count = this._state.items.filter(i => !i.checked).length;
-      this._updateCard();
-      this._callService("remove_item", { name });
-    }));
+        this._callService("remove_item", { name });
+      }
+    });
 
     // Quick add lives in persistent _footerDiv — bound in _updateFooter()
 
