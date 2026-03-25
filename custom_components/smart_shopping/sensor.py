@@ -24,6 +24,7 @@ async def async_setup_entry(
     sensors = [
         SmartShoppingCountSensor(coordinator, entry),
         SmartShoppingListSensor(coordinator, entry),
+        SmartShoppingPantrySensor(coordinator, entry),
     ]
 
     async_add_entities(sensors)
@@ -94,6 +95,44 @@ class SmartShoppingListSensor(SensorEntity):
     @property
     def extra_state_attributes(self):
         return self._coordinator.get_state_data()
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {(DOMAIN, self._entry.entry_id)},
+            "name": "Smart Shopping",
+            "manufacturer": "Smart Shopping",
+            "model": "Shopping Manager",
+        }
+
+
+class SmartShoppingPantrySensor(SensorEntity):
+    """Sensor exposing the pantry state to Lovelace cards."""
+
+    _attr_icon = "mdi:fridge-outline"
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        self._coordinator = coordinator
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_pantry"
+        self._attr_name = "Pantry"
+        coordinator.add_listener(self._handle_coordinator_update)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self.async_write_ha_state()
+
+    @property
+    def native_value(self):
+        return len(self._coordinator.pantry)
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "pantry": self._coordinator.pantry,
+            "count":  len(self._coordinator.pantry),
+        }
 
     @property
     def device_info(self):

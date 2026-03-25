@@ -10,6 +10,7 @@ _HERE = Path(__file__).parent
 
 CARD_URL    = "/smart_shopping/smart-shopping-card.js"
 SUMMARY_URL = "/smart_shopping/smart-shopping-summary-card.js"
+PANTRY_URL  = "/smart_shopping/smart-shopping-pantry-card.js"
 
 _HEADERS = {
     "Content-Type": "application/javascript; charset=utf-8",
@@ -18,30 +19,24 @@ _HEADERS = {
 
 
 class SmartShoppingCardView(HomeAssistantView):
-    """Serve smart-shopping-card.js."""
-
-    url           = CARD_URL
-    name          = "smart_shopping:card"
-    requires_auth = False
-
+    url = CARD_URL; name = "smart_shopping:card"; requires_auth = False
     async def get(self, request):
         from aiohttp.web import Response
         f = _HERE / "smart-shopping-card.js"
-        if not f.exists():
-            return Response(status=404, text="smart-shopping-card.js not found")
-        return Response(body=f.read_bytes(), headers=_HEADERS)
+        return Response(body=f.read_bytes(), headers=_HEADERS) if f.exists() else Response(status=404, text="not found")
 
 
 class SmartShoppingSummaryCardView(HomeAssistantView):
-    """Serve smart-shopping-summary-card.js."""
-
-    url           = SUMMARY_URL
-    name          = "smart_shopping:summary_card"
-    requires_auth = False
-
+    url = SUMMARY_URL; name = "smart_shopping:summary_card"; requires_auth = False
     async def get(self, request):
         from aiohttp.web import Response
         f = _HERE / "smart-shopping-summary-card.js"
-        if not f.exists():
-            return Response(status=404, text="smart-shopping-summary-card.js not found")
-        return Response(body=f.read_bytes(), headers=_HEADERS)
+        return Response(body=f.read_bytes(), headers=_HEADERS) if f.exists() else Response(status=404, text="not found")
+
+
+class SmartShoppingPantryCardView(HomeAssistantView):
+    url = PANTRY_URL; name = "smart_shopping:pantry_card"; requires_auth = False
+    async def get(self, request):
+        from aiohttp.web import Response
+        f = _HERE / "smart-shopping-pantry-card.js"
+        return Response(body=f.read_bytes(), headers=_HEADERS) if f.exists() else Response(status=404, text="not found")

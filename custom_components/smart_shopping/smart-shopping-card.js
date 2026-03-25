@@ -361,6 +361,7 @@ class SmartShoppingCard extends HTMLElement {
 
     // Form values — kept in state so we can restore on re-open
     this._itemForm  = { name:"", category:"Other", quantity:1, unit:"", image_url:"", store:"", notes:"" };
+    this._editForm  = null;   // populated when editing an existing item
     this._storeForm = { name:"", icon:"🛒", latitude:"", longitude:"", radius:100 };
     this._catForm   = { name:"", icon:"📦", color:"#607D8B" };
 
@@ -706,7 +707,7 @@ class SmartShoppingCard extends HTMLElement {
           ${qtyLabel ? `<span class="item-tile-qty">${qtyLabel}</span>` : ""}
           <button class="item-tile-remove" data-remove="${item.name}" title="Remove">✕</button>
         </div>
-        <div class="item-tile-body">
+        <div class="item-tile-body" data-edit="${item.name}" style="cursor:pointer" title="Tap to edit">
           <div class="item-tile-name">${item.name}</div>
           ${meta ? `<div class="item-tile-meta">${meta}</div>` : ""}
         </div>
@@ -901,6 +902,7 @@ class SmartShoppingCard extends HTMLElement {
   _buildModalHTML(type) {
     switch (type) {
       case "add_item":     return this._buildAddItemModal();
+      case "edit_item":    return this._buildEditItemModal();
       case "add_store":    return this._buildAddStoreModal();
       case "add_category": return this._buildAddCategoryModal();
       case "store_popup":  return this._buildStorePopup();
@@ -982,6 +984,103 @@ class SmartShoppingCard extends HTMLElement {
           </div>
         </div>
       </div>`;
+  }
+
+
+  _buildEditItemModal() {
+    const f = this._editForm || {};
+    return `
+      <div class="modal-overlay" id="overlay">
+        <div class="modal">
+          <div class="modal-header">
+            <div class="modal-title">✏️ Edit Item</div>
+            <button class="modal-close" id="modal-close">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">Item Name</label>
+              <input class="form-input" id="f-name" type="text" value="${f.name||""}">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Quantity</label>
+                <input class="form-input" id="f-qty" type="number" min="1" value="${f.quantity||1}">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Unit</label>
+                <input class="form-input" id="f-unit" type="text" placeholder="kg, L, pcs…" value="${f.unit||""}">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Category</label>
+              <select class="form-select" id="f-cat">
+                ${this._state.categories.map(c => `<option value="${c.name}" ${f.category===c.name?"selected":""}>${c.icon} ${c.name}</option>`).join("")}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Store</label>
+              <select class="form-select" id="f-store">
+                <option value="">Any store</option>
+                ${this._state.stores.map(s => `<option value="${s.name}" ${f.store===s.name?"selected":""}>${s.icon||"🛒"} ${s.name}</option>`).join("")}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Image URL (optional)</label>
+              <div class="image-preview-row">
+                ${f.image_url && isImageUrl(f.image_url)
+                  ? `<img id="img-preview" class="image-preview" src="${f.image_url}" alt="preview">`
+                  : `<div id="img-preview" class="image-preview-placeholder">\u{1F5BC}</div>`}
+                <input class="form-input" id="f-image" type="text" placeholder="https://… or /local/…" value="${f.image_url||""}">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Notes (optional)</label>
+              <input class="form-input" id="f-notes" type="text" value="${f.notes||""}">
+            </div>
+            <button class="btn-primary" id="f-submit">Save Changes</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  _bindEditItemEvents($, $$) {
+    const f = this._editForm;
+    if (!f) return;
+    const origName = f.name;
+
+    $("f-name")?.addEventListener("input",  e => { f.name     = e.target.value; });
+    $("f-qty")?.addEventListener("input",   e => { f.quantity = parseInt(e.target.value)||1; });
+    $("f-unit")?.addEventListener("input",  e => { f.unit     = e.target.value; });
+    $("f-notes")?.addEventListener("input", e => { f.notes    = e.target.value; });
+    $("f-cat")?.addEventListener("change",  e => { f.category = e.target.value; });
+    $("f-store")?.addEventListener("change",e => { f.store    = e.target.value; });
+
+    $("f-image")?.addEventListener("input", e => {
+      const val = e.target.value;
+      f.image_url = val;
+      const preview = this.shadowRoot.getElementById("img-preview");
+      if (!preview) return;
+      if (isImageUrl(val)) {
+        if (preview.tagName === "IMG") { preview.src = val; }
+        else {
+          const img = document.createElement("img");
+          img.id = "img-preview"; img.className = "image-preview"; img.src = val; img.alt = "preview";
+          preview.replaceWith(img);
+        }
+      }
+    });
+
+    $("f-submit")?.addEventListener("click", () => {
+      const name = (this.shadowRoot.getElementById("f-name")?.value || f.name).trim();
+      if (!name) return;
+      const idx = this._state.items.findIndex(i => i.name === origName);
+      if (idx !== -1) {
+        this._state.items[idx] = { ...this._state.items[idx], ...f, name };
+      }
+      this._editForm = null;
+      this._closeModal();
+      this._callService("update_items", { items: this._state.items });
+    });
   }
 
   _buildAddStoreModal() {
@@ -1205,7 +1304,8 @@ class SmartShoppingCard extends HTMLElement {
           tile.style.opacity    = "0";
         }
         setTimeout(() => {
-          this._callService("check_item",  { name });
+          const purchasedAt = new Date().toISOString();
+          this._callService("check_item",  { name, purchased_at: purchasedAt });
           this._callService("remove_item", { name });
           this._state.items           = this._state.items.filter(i => i.name !== name);
           this._state.total_count     = this._state.items.length;
@@ -1225,6 +1325,19 @@ class SmartShoppingCard extends HTMLElement {
         this._state.unchecked_count = this._state.items.filter(i => !i.checked).length;
         this._updateCard();
         this._callService("remove_item", { name });
+        return;
+      }
+
+      // Tap tile body — open edit modal
+      const editArea = e.target.closest("[data-edit]");
+      if (editArea) {
+        e.stopPropagation();
+        const name = editArea.dataset.edit;
+        const item = this._state.items.find(i => i.name === name);
+        if (item) {
+          this._editForm = { ...item };
+          this._openModal("edit_item");
+        }
       }
     });
 
@@ -1296,6 +1409,7 @@ class SmartShoppingCard extends HTMLElement {
 
     switch (this._modalType) {
       case "add_item":     this._bindAddItemEvents($, $$);     break;
+      case "edit_item":    this._bindEditItemEvents($, $$);    break;
       case "add_store":    this._bindAddStoreEvents($, $$);    break;
       case "add_category": this._bindAddCategoryEvents($, $$); break;
       case "store_popup":  this._bindStorePopupEvents($);      break;

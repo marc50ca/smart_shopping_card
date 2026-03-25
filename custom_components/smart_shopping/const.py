@@ -66,3 +66,8 @@ DEFAULT_CATEGORIES = [
 DEFAULT_STORES = [
     {"name": "Grocery Store", "icon": "mdi:store", "latitude": None, "longitude": None, "radius": 100},
 ]
+
+# Pantry services
+SERVICE_PANTRY_ADD    = "pantry_add"
+SERVICE_PANTRY_UPDATE = "pantry_update"
+SERVICE_PANTRY_REMOVE = "pantry_remove"

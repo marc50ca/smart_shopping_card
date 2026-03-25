@@ -28,6 +28,9 @@ from .const import (
     SERVICE_UPDATE_STORES,
     SERVICE_UPDATE_CATEGORIES,
     SERVICE_UPDATE_ITEMS,
+    SERVICE_PANTRY_ADD,
+    SERVICE_PANTRY_UPDATE,
+    SERVICE_PANTRY_REMOVE,
     EVENT_LIST_UPDATED,
     ITEM_NAME,
     ITEM_CATEGORY,
@@ -56,18 +59,19 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 def _register_frontend(hass: HomeAssistant) -> None:
     """Register JS HTTP views and Lovelace resources (idempotent)."""
     from pathlib import Path
-    from .http import SmartShoppingCardView, SmartShoppingSummaryCardView, CARD_URL, SUMMARY_URL
+    from .http import SmartShoppingCardView, SmartShoppingSummaryCardView, SmartShoppingPantryCardView, CARD_URL, SUMMARY_URL, PANTRY_URL
 
     # Only register HTTP views once per HA session
     if not hass.data.get(f"{DOMAIN}_frontend_registered"):
         hass.http.register_view(SmartShoppingCardView())
         hass.http.register_view(SmartShoppingSummaryCardView())
+        hass.http.register_view(SmartShoppingPantryCardView())
         hass.data[f"{DOMAIN}_frontend_registered"] = True
-        _LOGGER.info("Smart Shopping: JS views registered at %s and %s", CARD_URL, SUMMARY_URL)
+        _LOGGER.info("Smart Shopping: JS views registered at %s, %s and %s", CARD_URL, SUMMARY_URL, PANTRY_URL)
 
     # Verify JS files exist
     here = Path(__file__).parent
-    for fname in ("smart-shopping-card.js", "smart-shopping-summary-card.js"):
+    for fname in ("smart-shopping-card.js", "smart-shopping-summary-card.js", "smart-shopping-pantry-card.js"):
         if not (here / fname).exists():
             _LOGGER.error("Smart Shopping: %s not found in %s — card will not load!", fname, here)
 
@@ -76,12 +80,13 @@ def _register_frontend(hass: HomeAssistant) -> None:
         from homeassistant.components.frontend import add_extra_js_url
         add_extra_js_url(hass, CARD_URL)
         add_extra_js_url(hass, SUMMARY_URL)
+        add_extra_js_url(hass, PANTRY_URL)
         _LOGGER.info("Smart Shopping: Lovelace resources registered")
     except Exception as err:
         _LOGGER.warning(
             "Smart Shopping: Could not auto-register Lovelace resources (%s). "
-            "Add manually in Settings → Dashboards → ⋮ → Resources: %s  and  %s",
-            err, CARD_URL, SUMMARY_URL,
+            "Add manually in Settings → Dashboards → ⋮ → Resources: %s, %s and %s",
+            err, CARD_URL, SUMMARY_URL, PANTRY_URL,
         )
 
 
@@ -190,6 +195,20 @@ def _register_services(hass: HomeAssistant, coordinator: "SmartShoppingCoordinat
     hass.services.async_register(DOMAIN, SERVICE_UPDATE_CATEGORIES, handle_update_categories)
     hass.services.async_register(DOMAIN, SERVICE_UPDATE_ITEMS,      handle_update_items)
 
+    async def handle_pantry_add(call: ServiceCall) -> None:
+        await coordinator.async_pantry_add(dict(call.data))
+
+    async def handle_pantry_update(call: ServiceCall) -> None:
+        await coordinator.async_pantry_update(dict(call.data))
+
+    async def handle_pantry_remove(call: ServiceCall) -> None:
+        await coordinator.async_pantry_remove(str(call.data.get("id", "")))
+
+    hass.services.async_register(DOMAIN, SERVICE_PANTRY_ADD,    handle_pantry_add)
+    hass.services.async_register(DOMAIN, SERVICE_PANTRY_UPDATE, handle_pantry_update)
+    hass.services.async_register(DOMAIN, SERVICE_PANTRY_REMOVE, handle_pantry_remove)
+
+
     _LOGGER.debug("Smart Shopping: all 11 services registered")
 
 
@@ -213,6 +232,7 @@ class SmartShoppingCoordinator:
         self._categories: list[dict] = list(
             stored_data.get("categories", entry.data.get(CONF_CATEGORIES, DEFAULT_CATEGORIES))
         )
+        self._pantry: list[dict] = list(stored_data.get("pantry", []))
         self._listeners: list = []
 
     # --- Properties ---
@@ -235,6 +255,10 @@ class SmartShoppingCoordinator:
     @property
     def categories(self) -> list[dict]:
         return self._categories
+
+    @property
+    def pantry(self) -> list[dict]:
+        return self._pantry
 
     @property
     def unchecked_count(self) -> int:
@@ -269,6 +293,7 @@ class SmartShoppingCoordinator:
                 "items":      self._items,
                 "stores":     self._stores,
                 "categories": self._categories,
+                "pantry":     self._pantry,
             })
         except Exception as err:
             _LOGGER.error("Failed to save shopping data: %s", err)
@@ -380,4 +405,30 @@ class SmartShoppingCoordinator:
             "todo_entity":     self.todo_entity,
             "unchecked_count": self.unchecked_count,
             "total_count":     self.total_count,
+            "pantry":          self._pantry,
         }
+
+    async def async_pantry_add(self, entry: dict) -> None:
+        import uuid
+        if not entry.get("id"):
+            entry["id"] = str(uuid.uuid4())[:8]
+        idx = next((i for i, p in enumerate(self._pantry) if p.get("id") == entry["id"]), None)
+        if idx is not None:
+            self._pantry[idx] = entry
+        else:
+            self._pantry.insert(0, entry)
+        await self._async_save()
+        self._notify_listeners()
+
+    async def async_pantry_update(self, entry: dict) -> None:
+        idx = next((i for i, p in enumerate(self._pantry) if p.get("id") == entry.get("id")), None)
+        if idx is not None:
+            self._pantry[idx] = entry
+            await self._async_save()
+            self._notify_listeners()
+
+    async def async_pantry_remove(self, item_id: str) -> None:
+        self._pantry = [p for p in self._pantry if p.get("id") != item_id]
+        await self._async_save()
+        self._notify_listeners()
+
