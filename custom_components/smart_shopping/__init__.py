@@ -150,6 +150,11 @@ def _register_services(hass: HomeAssistant, coordinator: "SmartShoppingCoordinat
 
     name_schema = vol.Schema({vol.Required(ITEM_NAME): cv.string})
 
+    check_item_schema = vol.Schema({
+        vol.Required(ITEM_NAME): cv.string,
+        vol.Optional("purchased_at", default=""): cv.string,
+    })
+
     async def handle_add_item(call: ServiceCall) -> None:
         await coordinator.async_add_item(dict(call.data))
 
@@ -157,7 +162,10 @@ def _register_services(hass: HomeAssistant, coordinator: "SmartShoppingCoordinat
         await coordinator.async_remove_item(call.data[ITEM_NAME])
 
     async def handle_check_item(call: ServiceCall) -> None:
-        await coordinator.async_check_item(call.data[ITEM_NAME], True)
+        await coordinator.async_check_item(
+            call.data[ITEM_NAME], True,
+            purchased_at=call.data.get("purchased_at", "")
+        )
 
     async def handle_uncheck_item(call: ServiceCall) -> None:
         await coordinator.async_check_item(call.data[ITEM_NAME], False)
@@ -185,7 +193,7 @@ def _register_services(hass: HomeAssistant, coordinator: "SmartShoppingCoordinat
 
     hass.services.async_register(DOMAIN, SERVICE_ADD_ITEM,          handle_add_item,          schema=add_item_schema)
     hass.services.async_register(DOMAIN, SERVICE_REMOVE_ITEM,       handle_remove_item,       schema=name_schema)
-    hass.services.async_register(DOMAIN, SERVICE_CHECK_ITEM,        handle_check_item,        schema=name_schema)
+    hass.services.async_register(DOMAIN, SERVICE_CHECK_ITEM,        handle_check_item,        schema=check_item_schema)
     hass.services.async_register(DOMAIN, SERVICE_UNCHECK_ITEM,      handle_uncheck_item,      schema=name_schema)
     hass.services.async_register(DOMAIN, SERVICE_CLEAR_CHECKED,     handle_clear_checked)
     hass.services.async_register(DOMAIN, SERVICE_ADD_STORE,         handle_add_store)
@@ -331,11 +339,15 @@ class SmartShoppingCoordinator:
         await self._async_save()
         self._notify_listeners()
 
-    async def async_check_item(self, item_name: str, checked: bool) -> None:
-        """Check (True) or uncheck (False) an item by name."""
+    async def async_check_item(self, item_name: str, checked: bool, purchased_at: str = "") -> None:
+        """Check (True) or uncheck (False) an item by name. Optionally record purchase timestamp."""
         for item in self._items:
             if item[ITEM_NAME].lower() == item_name.lower():
                 item[ITEM_CHECKED] = checked
+                if checked and purchased_at:
+                    item["purchased_at"] = purchased_at
+                elif not checked:
+                    item.pop("purchased_at", None)
                 _LOGGER.debug("Item '%s' checked=%s", item_name, checked)
                 break
         await self._async_save()

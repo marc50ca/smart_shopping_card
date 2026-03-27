@@ -73,44 +73,62 @@ const PANTRY_STYLES = `
   .p-search::placeholder { color:var(--p-muted); }
   .p-sort { background:rgba(255,255,255,.05); border:1px solid var(--p-border); border-radius:8px; padding:6px 9px; font-size:11px; color:var(--p-text); cursor:pointer; outline:none; font-family:inherit; appearance:none; -webkit-appearance:none; }
 
-  /* TILE GRID */
-  .p-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:10px; padding:12px 14px; overflow-y:auto; max-height:500px; -webkit-overflow-scrolling:touch; touch-action:pan-y; overscroll-behavior:contain; }
+  /* ITEM LIST — full-width horizontal rows */
+  .p-grid { display:flex; flex-direction:column; overflow-y:auto; max-height:520px; -webkit-overflow-scrolling:touch; touch-action:pan-y; overscroll-behavior:contain; }
 
-  /* TILE */
-  .p-tile { background:rgba(255,255,255,.05); border:1px solid var(--p-border); border-radius:14px; display:flex; flex-direction:column; overflow:hidden; transition:border-color .2s; min-width:0; }
-  .p-tile:hover { border-color:rgba(0,212,170,.35); }
+  /* ROW */
+  .p-tile {
+    display:grid;
+    grid-template-columns: 44px 1fr auto auto auto 72px;
+    align-items:center;
+    gap:12px;
+    padding:11px 16px;
+    border-bottom:1px solid var(--p-border);
+    transition:background .15s;
+    min-width:0;
+  }
+  .p-tile:last-child { border-bottom:none; }
+  .p-tile:hover { background:rgba(255,255,255,.03); }
 
-  .p-tile-top { padding:12px 10px 8px; display:flex; flex-direction:column; align-items:center; gap:5px; }
-  .p-tile-loc-icon { font-size:26px; }
-  .p-tile-name { font-size:12px; font-weight:700; color:var(--p-text); text-align:center; word-break:break-word; line-height:1.3; }
+  /* col 1: location icon */
+  .p-tile-loc-icon { font-size:24px; width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+  /* col 2: name + qty + contents */
+  .p-tile-top { display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .p-tile-name { font-size:14px; font-weight:700; color:var(--p-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .p-tile-qty  { font-size:11px; font-weight:600; color:var(--p-primary); }
+  .p-tile-contents { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+  .p-tile-content-row { display:flex; align-items:center; gap:3px; font-size:10px; color:var(--p-muted); background:rgba(255,255,255,.05); border-radius:6px; padding:2px 6px; }
+  .p-tile-content-name { }
+  .p-tile-content-qty  { color:var(--p-primary); font-weight:700; }
 
-  /* contents list inside tile */
-  .p-tile-contents { padding:0 8px 6px; display:flex; flex-direction:column; gap:2px; }
-  .p-tile-content-row { display:flex; align-items:center; gap:4px; font-size:10px; color:var(--p-muted); }
-  .p-tile-content-row::before { content:"·"; flex-shrink:0; }
-  .p-tile-content-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .p-tile-content-qty  { color:var(--p-primary); font-weight:700; flex-shrink:0; }
-
-  /* badges */
-  .p-tile-badges { padding:0 8px 6px; display:flex; flex-wrap:wrap; gap:3px; }
-  .p-badge { font-size:9px; font-weight:700; padding:2px 5px; border-radius:8px; white-space:nowrap; }
+  /* col 3: location badge */
+  .p-tile-badges { display:flex; flex-direction:column; gap:3px; flex-shrink:0; align-items:flex-end; }
+  .p-badge { font-size:10px; font-weight:600; padding:3px 8px; border-radius:10px; white-space:nowrap; }
   .badge-loc    { }
   .badge-bought { background:rgba(255,255,255,.07); color:var(--p-muted); }
   .badge-bestby { background:rgba(255,255,255,.07); color:var(--p-muted); }
   .badge-bestby.expiring-soon { background:rgba(255,107,107,.2); color:#ff8a80; }
   .badge-bestby.expiring      { background:rgba(255,167,38,.15);  color:#ffb74d; }
-  .badge-bestby.expired       { background:rgba(255,82,82,.2);    color:var(--p-accent); }
+  .badge-bestby.expired       { background:rgba(255,82,82,.2);    color:var(--p-accent); font-weight:700; }
 
-  /* actions */
-  .p-tile-actions { display:flex; border-top:1px solid var(--p-border); margin-top:auto; }
-  .p-tile-btn { flex:1; border:none; background:transparent; color:var(--p-muted); font-size:13px; padding:7px 0; cursor:pointer; transition:all .15s; }
-  .p-tile-btn:first-child { border-right:1px solid var(--p-border); }
-  .p-tile-btn.edt:hover { background:rgba(0,212,170,.1); color:var(--p-primary); }
-  .p-tile-btn.del:hover { background:rgba(255,107,107,.15); color:var(--p-accent); }
+  /* col 4+5: date columns */
+  .p-date-col { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; min-width:90px; }
+  .p-date-label { font-size:9px; color:var(--p-muted); text-transform:uppercase; letter-spacing:.5px; }
+  .p-date-val   { font-size:11px; font-weight:600; color:var(--p-text); }
+  .p-date-val.expiring-soon { color:#ff8a80; }
+  .p-date-val.expiring      { color:#ffb74d; }
+  .p-date-val.expired       { color:var(--p-accent); }
+  .p-date-days  { font-size:10px; color:var(--p-muted); }
+
+  /* col 6: action buttons */
+  .p-tile-actions { display:flex; gap:5px; flex-shrink:0; }
+  .p-tile-btn { border:none; border-radius:8px; width:30px; height:30px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; transition:all .15s; background:rgba(255,255,255,.05); color:var(--p-muted); }
+  .p-tile-btn.edt:hover { background:rgba(0,212,170,.15); color:var(--p-primary); }
+  .p-tile-btn.del:hover { background:rgba(255,107,107,.2); color:var(--p-accent); }
 
   /* EMPTY */
-  .p-empty { text-align:center; padding:40px 20px; color:var(--p-muted); grid-column:1/-1; }
+  .p-empty { text-align:center; padding:40px 20px; color:var(--p-muted); }
   .p-empty-icon { font-size:38px; margin-bottom:10px; }
 
   /* MODAL */
@@ -259,33 +277,42 @@ class SmartShoppingPantryCard extends HTMLElement {
     const loc    = LOCATIONS.find(l => l.id === item.location) || LOCATIONS[0];
     const expCls = expiryClass(item.best_by);
     const days   = daysUntil(item.best_by);
-    const expLbl = days===null?"" : days<0?"Expired!" : days===0?"Today!" : `${days}d`;
-    const qtyStr = item.quantity ? `${item.quantity}${item.unit?" "+item.unit:""}` : "";
+    const expLbl = days===null ? "" : days<0 ? "Expired" : days===0 ? "Today" : `${days}d left`;
+    const qtyStr = item.quantity ? `${item.quantity}${item.unit ? " "+item.unit : ""}` : "";
 
-    const contents = (item.contents || []);
-    const contentsHtml = contents.length
-      ? `<div class="p-tile-contents">
-          ${contents.map(c => `
-            <div class="p-tile-content-row">
-              <span class="p-tile-content-name">${c.name}</span>
-              ${c.quantity ? `<span class="p-tile-content-qty">${c.quantity}${c.unit||""}</span>` : ""}
-            </div>`).join("")}
-         </div>`
-      : "";
+    const contentsHtml = (item.contents||[]).filter(c=>c.name).map(c =>
+      `<span class="p-tile-content-row">
+        <span class="p-tile-content-name">${c.name}</span>
+        ${c.quantity ? `<span class="p-tile-content-qty"> · ${c.quantity}${c.unit||""}</span>` : ""}
+      </span>`
+    ).join("");
+
+    const boughtCol = item.purchased_at ? `
+      <div class="p-date-col">
+        <span class="p-date-label">Bought</span>
+        <span class="p-date-val">${fmtDate(item.purchased_at)}</span>
+      </div>` : `<div class="p-date-col"></div>`;
+
+    const bestByCol = item.best_by ? `
+      <div class="p-date-col">
+        <span class="p-date-label">Best by</span>
+        <span class="p-date-val ${expCls}">${fmtDate(item.best_by)}</span>
+        ${expLbl ? `<span class="p-date-days ${expCls}">${expLbl}</span>` : ""}
+      </div>` : `<div class="p-date-col"></div>`;
 
     return `
       <div class="p-tile">
-        <div class="p-tile-top" style="background:${loc.color}18;border-bottom:2px solid ${loc.color}44">
-          <div class="p-tile-loc-icon">${loc.icon}</div>
+        <div class="p-tile-loc-icon" style="background:${loc.color}18">${loc.icon}</div>
+        <div class="p-tile-top">
           <div class="p-tile-name">${item.name}</div>
           ${qtyStr ? `<div class="p-tile-qty">${qtyStr}</div>` : ""}
+          ${contentsHtml ? `<div class="p-tile-contents">${contentsHtml}</div>` : ""}
         </div>
-        ${contentsHtml}
         <div class="p-tile-badges">
-          <span class="p-badge badge-loc" style="background:${loc.color}22;color:${loc.color}">${loc.label}</span>
-          ${item.purchased_at ? `<span class="p-badge badge-bought">🛒 ${fmtDate(item.purchased_at)}</span>` : ""}
-          ${item.best_by ? `<span class="p-badge badge-bestby ${expCls}">📅 ${fmtDate(item.best_by)}${expLbl?" · "+expLbl:""}</span>` : ""}
+          <span class="p-badge badge-loc" style="background:${loc.color}22;color:${loc.color}">${loc.icon} ${loc.label}</span>
         </div>
+        ${boughtCol}
+        ${bestByCol}
         <div class="p-tile-actions">
           <button class="p-tile-btn edt" data-edit="${item.id}" title="Edit">✏️</button>
           <button class="p-tile-btn del" data-delete="${item.id}" title="Remove">✕</button>
