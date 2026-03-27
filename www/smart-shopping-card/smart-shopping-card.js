@@ -442,6 +442,59 @@ class SmartShoppingCard extends HTMLElement {
     this._applyWidth();
     this._updateCard();
     this._updateFooter();
+    this._initDelegation();
+  }
+  _initDelegation() {
+    // Set up ONCE in _initDOM — never accumulates duplicates across re-renders
+    this._cardDiv.addEventListener("click", e => {
+      // "Got it" — mark purchased AND remove
+      const buyBtn = e.target.closest("[data-buy]");
+      if (buyBtn) {
+        e.stopPropagation();
+        const name = buyBtn.dataset.buy;
+        const tile = buyBtn.closest(".item-tile");
+        if (tile) {
+          tile.style.transition = "transform .18s ease, opacity .18s ease";
+          tile.style.transform  = "scale(.85)";
+          tile.style.opacity    = "0";
+        }
+        setTimeout(() => {
+          const purchasedAt = new Date().toISOString();
+          this._callService("check_item",  { name, purchased_at: purchasedAt });
+          this._callService("remove_item", { name });
+          this._state.items           = this._state.items.filter(i => i.name !== name);
+          this._state.total_count     = this._state.items.length;
+          this._state.unchecked_count = this._state.items.filter(i => !i.checked).length;
+          this._updateCard();
+        }, 180);
+        return;
+      }
+
+      // ✕ corner — silent delete without marking purchased
+      const removeBtn = e.target.closest("[data-remove]");
+      if (removeBtn) {
+        e.stopPropagation();
+        const name = removeBtn.dataset.remove;
+        this._state.items           = this._state.items.filter(i => i.name !== name);
+        this._state.total_count     = this._state.items.length;
+        this._state.unchecked_count = this._state.items.filter(i => !i.checked).length;
+        this._updateCard();
+        this._callService("remove_item", { name });
+        return;
+      }
+
+      // Tap tile body — open edit modal
+      const editArea = e.target.closest("[data-edit]");
+      if (editArea) {
+        e.stopPropagation();
+        const name = editArea.dataset.edit;
+        const item = this._state.items.find(i => i.name === name);
+        if (item) {
+          this._editForm = { ...item };
+          this._openModal("edit_item");
+        }
+      }
+    });
   }
 
   // ── Width — applied directly to the host element ───────────────────
@@ -1289,57 +1342,7 @@ class SmartShoppingCard extends HTMLElement {
       }, 150);
     });
 
-    // Use event delegation on the card div — more reliable than per-element listeners
-    // because it survives re-renders and works on touch devices
-    this._cardDiv.addEventListener("click", e => {
-      // "Got it" — mark purchased AND remove
-      const buyBtn = e.target.closest("[data-buy]");
-      if (buyBtn) {
-        e.stopPropagation();
-        const name = buyBtn.dataset.buy;
-        const tile = buyBtn.closest(".item-tile");
-        if (tile) {
-          tile.style.transition = "transform .18s ease, opacity .18s ease";
-          tile.style.transform  = "scale(.85)";
-          tile.style.opacity    = "0";
-        }
-        setTimeout(() => {
-          const purchasedAt = new Date().toISOString();
-          this._callService("check_item",  { name, purchased_at: purchasedAt });
-          this._callService("remove_item", { name });
-          this._state.items           = this._state.items.filter(i => i.name !== name);
-          this._state.total_count     = this._state.items.length;
-          this._state.unchecked_count = this._state.items.filter(i => !i.checked).length;
-          this._updateCard();
-        }, 180);
-        return;
-      }
-
-      // ✕ corner — silent delete without marking purchased
-      const removeBtn = e.target.closest("[data-remove]");
-      if (removeBtn) {
-        e.stopPropagation();
-        const name = removeBtn.dataset.remove;
-        this._state.items           = this._state.items.filter(i => i.name !== name);
-        this._state.total_count     = this._state.items.length;
-        this._state.unchecked_count = this._state.items.filter(i => !i.checked).length;
-        this._updateCard();
-        this._callService("remove_item", { name });
-        return;
-      }
-
-      // Tap tile body — open edit modal
-      const editArea = e.target.closest("[data-edit]");
-      if (editArea) {
-        e.stopPropagation();
-        const name = editArea.dataset.edit;
-        const item = this._state.items.find(i => i.name === name);
-        if (item) {
-          this._editForm = { ...item };
-          this._openModal("edit_item");
-        }
-      }
-    });
+    // Item tile delegation is set up once in _initDelegation() — not here
 
     // Quick add lives in persistent _footerDiv — bound in _updateFooter()
 
