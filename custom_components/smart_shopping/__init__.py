@@ -58,8 +58,16 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 def _register_frontend(hass: HomeAssistant) -> None:
     """Register JS HTTP views and Lovelace resources (idempotent)."""
+    import json
     from pathlib import Path
     from .http import SmartShoppingCardView, SmartShoppingSummaryCardView, SmartShoppingPantryCardView, CARD_URL, SUMMARY_URL, PANTRY_URL
+
+    # Read integration version for cache-busting query strings
+    here = Path(__file__).parent
+    try:
+        _ver = json.loads((here / "manifest.json").read_text())["version"]
+    except Exception:
+        _ver = "0"
 
     # Only register HTTP views once per HA session
     if not hass.data.get(f"{DOMAIN}_frontend_registered"):
@@ -70,18 +78,18 @@ def _register_frontend(hass: HomeAssistant) -> None:
         _LOGGER.info("Smart Shopping: JS views registered at %s, %s and %s", CARD_URL, SUMMARY_URL, PANTRY_URL)
 
     # Verify JS files exist
-    here = Path(__file__).parent
     for fname in ("smart-shopping-card.js", "smart-shopping-summary-card.js", "smart-shopping-pantry-card.js"):
         if not (here / fname).exists():
             _LOGGER.error("Smart Shopping: %s not found in %s — card will not load!", fname, here)
 
-    # Register with Lovelace (idempotent — HA deduplicates these internally)
+    # Register with Lovelace using version query strings to bust the browser cache.
+    # Each new integration version forces a fresh fetch; no more hard-refresh needed.
     try:
         from homeassistant.components.frontend import add_extra_js_url
-        add_extra_js_url(hass, CARD_URL)
-        add_extra_js_url(hass, SUMMARY_URL)
-        add_extra_js_url(hass, PANTRY_URL)
-        _LOGGER.info("Smart Shopping: Lovelace resources registered")
+        add_extra_js_url(hass, f"{CARD_URL}?v={_ver}")
+        add_extra_js_url(hass, f"{SUMMARY_URL}?v={_ver}")
+        add_extra_js_url(hass, f"{PANTRY_URL}?v={_ver}")
+        _LOGGER.info("Smart Shopping: Lovelace resources registered (v%s)", _ver)
     except Exception as err:
         _LOGGER.warning(
             "Smart Shopping: Could not auto-register Lovelace resources (%s). "
