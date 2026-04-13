@@ -7,7 +7,7 @@
  * from any open modal input field.
  */
 
-const CARD_VERSION = "1.4.0";
+const CARD_VERSION = "1.4.1";
 
 const DEFAULT_CATEGORIES = [
   { name: "Produce",       icon: "🥦", color: "#4CAF50" },
@@ -524,7 +524,12 @@ class SmartShoppingCard extends HTMLElement {
 
   _updateCard() {
     if (!this._cardDiv) return;
+    const prevScroll = this._cardDiv.querySelector(".items-container")?.scrollTop ?? 0;
     this._cardDiv.innerHTML = this._buildCardHTML();
+    if (prevScroll > 0) {
+      const ic = this._cardDiv.querySelector(".items-container");
+      if (ic) ic.scrollTop = prevScroll;
+    }
     this._bindCardEvents();
     // Show/hide footer depending on current view
     if (this._footerDiv) {

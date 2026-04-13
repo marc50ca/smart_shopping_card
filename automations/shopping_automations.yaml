@@ -17,7 +17,7 @@
   condition:
     - condition: template
       value_template: >
-        {{ state_attr('sensor.shopping_list', 'unchecked_count') | int > 0 }}
+        {{ state_attr('sensor.smart_shopping_shopping_list', 'unchecked_count') | int > 0 }}
   action:
     - event: smart_shopping_near_store
       event_data:
@@ -27,8 +27,8 @@
       data:
         title: "🛒 Shopping Reminder"
         message: >
-          You're near {{ trigger.zone }}! 
-          You have {{ state_attr('sensor.shopping_list', 'unchecked_count') }} items on your list.
+          You're near {{ trigger.zone }}!
+          You have {{ state_attr('sensor.smart_shopping_shopping_list', 'unchecked_count') }} items on your list.
         data:
           tag: "shopping-reminder"
           url: "/lovelace/shopping"   # <-- Your dashboard path
@@ -59,13 +59,13 @@
   condition:
     - condition: template
       value_template: >
-        {{ state_attr('sensor.shopping_list', 'unchecked_count') | int > 0 }}
+        {{ state_attr('sensor.smart_shopping_shopping_list', 'unchecked_count') | int > 0 }}
   action:
     - service: notify.mobile_app_YOUR_PHONE
       data:
         title: "🛒 Shopping List"
         message: >
-          You have {{ state_attr('sensor.shopping_list', 'unchecked_count') }} items 
+          You have {{ state_attr('sensor.smart_shopping_shopping_list', 'unchecked_count') }} items
           on your shopping list today.
 
 
